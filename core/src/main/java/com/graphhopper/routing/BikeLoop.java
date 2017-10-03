@@ -2,10 +2,9 @@ package com.graphhopper.routing;
 
 import com.carrotsearch.hppc.IntArrayList;
 import com.graphhopper.routing.ch.PrepareContractionHierarchies;
-import com.graphhopper.routing.util.DefaultEdgeFilter;
-import com.graphhopper.routing.util.EdgeFilter;
-import com.graphhopper.routing.util.LevelEdgeFilter;
-import com.graphhopper.routing.util.TraversalMode;
+import com.graphhopper.routing.util.*;
+import com.graphhopper.routing.weighting.BikePriorityWeighting;
+import com.graphhopper.routing.weighting.ShortestWeighting;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.CHGraph;
 import com.graphhopper.storage.Graph;
@@ -16,6 +15,7 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
 
     private EdgeFilter levelEdgeFilter; // Used for CH Dijkstra search
     private EdgeFilter bikeEdgeFilter;
+    private Weighting shortestWeighting;
 
     private Graph baseGraph;
     private boolean isFinished = false;
@@ -26,13 +26,17 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
 
     /**
      * @param graph specifies the graph where this algorithm will run on
-     * @param weighting set the used weight calculation (e.g. fastest, shortest).
      */
-    public BikeLoop(Graph graph, Weighting weighting) {
-        super(graph, weighting, TraversalMode.EDGE_BASED_1DIR);
+    public BikeLoop(Graph graph) {
+        super(graph, new BikePriorityWeighting(new RacingBikeFlagEncoder()), TraversalMode.EDGE_BASED_1DIR);
+
+        if (!(graph instanceof CHGraph)) {
+            throw new IllegalArgumentException("You must pass a CH graph to this algorithm!");
+        }
         baseGraph = graph.getBaseGraph();
         levelEdgeFilter = new LevelEdgeFilter((CHGraph) graph);
         bikeEdgeFilter = new DefaultEdgeFilter(weighting.getFlagEncoder());
+        shortestWeighting = new ShortestWeighting(weighting.getFlagEncoder());
     }
 
     @Override
@@ -54,7 +58,7 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
 
     // TODO (Aidan)
     private boolean localSearch(Solution path, int s, int d, double dist,
-                                double distMin, double minProfit) {
+                                double minProfit) {
         if (shortestPath(s, d) > dist) {
             return false;
         }
@@ -68,15 +72,15 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
             double currentDist = iter.getDistance();
             int nextNode = iter.getAdjNode();
 
-            // A high weight means avoid a road
-            double edgeScore = -weighting.calcWeight(iter, false, nextNode);
+            // Priority of the road
+            double edgeScore = weighting.calcWeight(iter, false, nextNode);
 
             path.addEdge(currentEdge, currentDist, edgeScore);
 
-            if (nextNode == d && path.cost >= distMin && path.score > minProfit) {
+            if (nextNode == d && path.cost >= minCost && path.score > minProfit) {
                 return true;
             } else {
-                if (localSearch(path, nextNode, d, dist - currentDist, distMin, minProfit)) {
+                if (localSearch(path, nextNode, d, dist - currentDist, minProfit)) {
                     return true;
                 }
             }
@@ -118,7 +122,8 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
     private double shortestPath(int s, int d) {
         PrepareContractionHierarchies.DijkstraBidirectionCH search =
                 new PrepareContractionHierarchies.DijkstraBidirectionCH(graph,
-                        weighting, TraversalMode.EDGE_BASED_2DIR);
+                        shortestWeighting, TraversalMode.EDGE_BASED_2DIR);
+        // TODO (Aidan) Replace this edge filter with one that respects vehicles
         search.setEdgeFilter(levelEdgeFilter);
 
         Path path = search.calcPath(s, d);
