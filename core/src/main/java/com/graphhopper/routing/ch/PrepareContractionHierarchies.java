@@ -28,8 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-import static com.graphhopper.util.Parameters.Algorithms.ASTAR_BI;
-import static com.graphhopper.util.Parameters.Algorithms.DIJKSTRA_BI;
+import static com.graphhopper.util.Parameters.Algorithms.*;
 
 /**
  * This class prepares the graph for a bidirectional algorithm supporting contraction hierarchies
@@ -89,7 +88,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation imple
      * <p>
      *
      * @param periodicUpdates specifies how often periodic updates will happen. Use something less
-     *                        than 10.
+     * than 10.
      */
     public PrepareContractionHierarchies setPeriodicUpdates(int periodicUpdates) {
         if (periodicUpdates < 0)
@@ -103,7 +102,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation imple
 
     /**
      * @param lazyUpdates specifies when lazy updates will happen, measured relative to all existing
-     *                    nodes. 100 means always.
+     * nodes. 100 means always.
      */
     public PrepareContractionHierarchies setLazyUpdates(int lazyUpdates) {
         if (lazyUpdates < 0)
