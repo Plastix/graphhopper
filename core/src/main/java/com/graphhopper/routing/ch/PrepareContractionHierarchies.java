@@ -21,6 +21,7 @@ import com.graphhopper.coll.GHTreeMapComposed;
 import com.graphhopper.routing.*;
 import com.graphhopper.routing.util.*;
 import com.graphhopper.routing.weighting.AbstractWeighting;
+import com.graphhopper.routing.weighting.PriorityWeighting;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.*;
 import com.graphhopper.util.*;
@@ -29,8 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-import static com.graphhopper.util.Parameters.Algorithms.ASTAR_BI;
-import static com.graphhopper.util.Parameters.Algorithms.DIJKSTRA_BI;
+import static com.graphhopper.util.Parameters.Algorithms.*;
 
 /**
  * This class prepares the graph for a bidirectional algorithm supporting contraction hierarchies
@@ -103,7 +103,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation imple
      * <p>
      *
      * @param periodicUpdates specifies how often periodic updates will happen. Use something less
-     *                        than 10.
+     * than 10.
      */
     public PrepareContractionHierarchies setPeriodicUpdates(int periodicUpdates) {
         if (periodicUpdates < 0)
@@ -117,7 +117,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation imple
 
     /**
      * @param lazyUpdates specifies when lazy updates will happen, measured relative to all existing
-     *                    nodes. 100 means always.
+     * nodes. 100 means always.
      */
     public PrepareContractionHierarchies setLazyUpdates(int lazyUpdates) {
         if (lazyUpdates < 0)
@@ -305,7 +305,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation imple
             CHEdgeIterator iter = vehicleAllExplorer.setBaseNode(polledNode);
             while (iter.next()) {
 
-                if(Thread.currentThread().isInterrupted()){
+                if (Thread.currentThread().isInterrupted()) {
                     throw new RuntimeException("Thread was interrupted");
                 }
 
@@ -642,21 +642,23 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation imple
 
     @Override
     public RoutingAlgorithm createAlgo(Graph graph, AlgorithmOptions opts) {
-        AbstractBidirAlgo algo;
         if (ASTAR_BI.equals(opts.getAlgorithm())) {
             AStarBidirection tmpAlgo = new AStarBidirectionCH(graph, prepareWeighting, traversalMode);
             tmpAlgo.setApproximation(RoutingAlgorithmFactorySimple.getApproximation(ASTAR_BI, opts, graph.getNodeAccess()));
-            algo = tmpAlgo;
+            tmpAlgo.setMaxVisitedNodes(opts.getMaxVisitedNodes());
+            tmpAlgo.setEdgeFilter(levelFilter);
+            return tmpAlgo;
 
         } else if (DIJKSTRA_BI.equals(opts.getAlgorithm())) {
-            algo = new DijkstraBidirectionCH(graph, prepareWeighting, traversalMode);
+            AbstractBidirAlgo algo = new DijkstraBidirectionCH(graph, prepareWeighting, traversalMode);
+            algo.setMaxVisitedNodes(opts.getMaxVisitedNodes());
+            algo.setEdgeFilter(levelFilter);
+            return algo;
+        } else if (BIKE_LOOP.equals(opts.getAlgorithm())) {
+            return new BikeLoop(graph, new PriorityWeighting(new RacingBikeFlagEncoder()));
         } else {
             throw new IllegalArgumentException("Algorithm " + opts.getAlgorithm() + " not supported for Contraction Hierarchies. Try with ch.disable=true");
         }
-
-        algo.setMaxVisitedNodes(opts.getMaxVisitedNodes());
-        algo.setEdgeFilter(levelFilter);
-        return algo;
     }
 
     public static class AStarBidirectionCH extends AStarBidirection {

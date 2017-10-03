@@ -57,6 +57,9 @@ public class Parameters {
          */
         public static final String ROUND_TRIP = "round_trip";
 
+        // TODO (Aidan)
+        public static final String BIKE_LOOP = "bikeloop";
+
         /**
          * All public properties for alternative routing.
          */
