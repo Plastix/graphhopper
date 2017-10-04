@@ -1,6 +1,7 @@
 package com.graphhopper.routing;
 
 import com.carrotsearch.hppc.IntArrayList;
+import com.graphhopper.routing.ch.PreparationWeighting;
 import com.graphhopper.routing.ch.PrepareContractionHierarchies;
 import com.graphhopper.routing.util.*;
 import com.graphhopper.routing.weighting.BikePriorityWeighting;
@@ -36,7 +37,7 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
         baseGraph = graph.getBaseGraph();
         levelEdgeFilter = new LevelEdgeFilter((CHGraph) graph);
         bikeEdgeFilter = new DefaultEdgeFilter(weighting.getFlagEncoder());
-        shortestWeighting = new ShortestWeighting(weighting.getFlagEncoder());
+        shortestWeighting = new PreparationWeighting(new ShortestWeighting(weighting.getFlagEncoder()));
     }
 
     @Override
