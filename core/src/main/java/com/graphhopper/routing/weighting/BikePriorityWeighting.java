@@ -4,6 +4,7 @@ import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.routing.util.PriorityCode;
 import com.graphhopper.util.EdgeIteratorState;
 
+import static com.graphhopper.routing.util.PriorityCode.BEST;
 import static com.graphhopper.routing.weighting.PriorityWeighting.KEY;
 
 // TODO (Aidan) 
@@ -25,6 +26,6 @@ public class BikePriorityWeighting extends AbstractWeighting {
 
     @Override
     public String getName() {
-        return "bike priority";
+        return "bike_priority";
     }
 }
