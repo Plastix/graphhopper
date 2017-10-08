@@ -1,13 +1,15 @@
 package com.graphhopper.routing;
 
 import com.carrotsearch.hppc.IntArrayList;
-import com.graphhopper.routing.ch.PreparationWeighting;
+import com.carrotsearch.hppc.cursors.IntCursor;
+import com.graphhopper.coll.GHBitSet;
+import com.graphhopper.coll.GHBitSetImpl;
 import com.graphhopper.routing.ch.PrepareContractionHierarchies;
-import com.graphhopper.routing.util.*;
+import com.graphhopper.routing.util.DefaultEdgeFilter;
+import com.graphhopper.routing.util.EdgeFilter;
+import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.weighting.BikePriorityWeighting;
-import com.graphhopper.routing.weighting.ShortestWeighting;
 import com.graphhopper.routing.weighting.Weighting;
-import com.graphhopper.storage.CHGraph;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.util.EdgeExplorer;
 import com.graphhopper.util.EdgeIterator;
@@ -16,28 +18,26 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
 
     private EdgeFilter levelEdgeFilter; // Used for CH Dijkstra search
     private EdgeFilter bikeEdgeFilter;
-    private Weighting shortestWeighting;
+    private Weighting bikePriorityWeighting;
 
     private Graph baseGraph;
     private boolean isFinished = false;
     private int visitedNodes = 0;
 
     private double maxCost = 50_000; // in meters
-    private double minCost = 16_000; // in meters
+    private double minCost = 8_000; // in meters
+    private int maxDepth = 20;
 
     /**
      * @param graph specifies the graph where this algorithm will run on
      */
-    public BikeLoop(Graph graph) {
-        super(graph, new BikePriorityWeighting(new RacingBikeFlagEncoder()), TraversalMode.EDGE_BASED_1DIR);
+    public BikeLoop(Graph graph, Weighting weighting, EdgeFilter levelEdgeFilter) {
+        super(graph, weighting, TraversalMode.EDGE_BASED_1DIR);
 
-        if (!(graph instanceof CHGraph)) {
-            throw new IllegalArgumentException("You must pass a CH graph to this algorithm!");
-        }
         baseGraph = graph.getBaseGraph();
-        levelEdgeFilter = new LevelEdgeFilter((CHGraph) graph);
-        bikeEdgeFilter = new DefaultEdgeFilter(weighting.getFlagEncoder());
-        shortestWeighting = new PreparationWeighting(new ShortestWeighting(weighting.getFlagEncoder()));
+        this.levelEdgeFilter = levelEdgeFilter;
+        bikeEdgeFilter = new DefaultEdgeFilter(flagEncoder);
+        bikePriorityWeighting = new BikePriorityWeighting(flagEncoder);
     }
 
     @Override
@@ -46,21 +46,25 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
         return runILS(from, to);
     }
 
-    // TODO (Aidan)
     private Path runILS(int s, int d) {
-//        Path path = new Path(graph, weighting);
-//        path.setFromNode(s)
-//                .setEndNode(d);
-
-        isFinished = true;
-
-        return null;
+        Solution solution = new Solution();
+        Path path = new Path(baseGraph, weighting);
+        if (localSearch(solution, s, d, maxCost, 0, maxDepth)) {
+            for (IntCursor edge : solution.edges) {
+                path.addEdge(edge.value);
+            }
+            return path
+                    .setEndNode(d)
+                    .setFromNode(s)
+                    .setFound(true);
+        } else {
+            return path.setFound(false);
+        }
     }
 
-    // TODO (Aidan)
     private boolean localSearch(Solution path, int s, int d, double dist,
-                                double minProfit) {
-        if (shortestPath(s, d) > dist) {
+                                double minProfit, int maxDepth) {
+        if (maxDepth < 0 || shortestPath(s, d) > dist) {
             return false;
         }
 
@@ -70,50 +74,65 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
 
         while (iter.next()) {
             int currentEdge = iter.getEdge();
-            double currentDist = iter.getDistance();
+            double edgeCost = iter.getDistance();
             int nextNode = iter.getAdjNode();
 
-            // Priority of the road
-            double edgeScore = weighting.calcWeight(iter, false, nextNode);
+            double remainingDist = dist - edgeCost;
+            double shortestDist = shortestPath(nextNode, d);
 
-            path.addEdge(currentEdge, currentDist, edgeScore);
+            if (!path.bitSet.contains(currentEdge) && shortestDist < remainingDist) {
 
-            if (nextNode == d && path.cost >= minCost && path.score > minProfit) {
-                return true;
-            } else {
-                if (localSearch(path, nextNode, d, dist - currentDist, minProfit)) {
+                double edgeScore = bikePriorityWeighting
+                        .calcWeight(iter, false, nextNode);
+
+                path.addEdge(currentEdge, nextNode, edgeCost, edgeScore);
+
+                if (nextNode == d &&
+                        path.cost >= minCost &&
+                        path.score > minProfit) {
+
+                    return true;
+                } else if (localSearch(path, nextNode, d, remainingDist,
+                        minProfit, maxDepth - 1)) {
                     return true;
                 }
-            }
 
-            path.removeEdge(currentEdge, currentDist, edgeScore);
+                path.removeEdge(currentEdge, nextNode, edgeCost, edgeScore);
+            }
         }
 
         return false;
     }
 
     private static final class Solution {
-        IntArrayList path;
+        IntArrayList edges;
+        IntArrayList nodes;
+        GHBitSet bitSet;
         double cost;
         double score;
 
-        public Solution() {
-            path = new IntArrayList();
+        Solution() {
+            edges = new IntArrayList();
+            nodes = new IntArrayList();
+            bitSet = new GHBitSetImpl();
             cost = 0;
         }
 
-        void addEdge(int edgeId, double cost, double score) {
-            path.add(edgeId);
+        void addEdge(int edgeId, int nodeId, double cost, double score) {
+            edges.add(edgeId);
+            nodes.add(nodeId);
+            bitSet.add(edgeId);
             this.cost += cost;
             this.score += score;
         }
 
-        void removeEdge(int edgeId, double cost, double score) {
-            path.removeFirst(edgeId);
+        void removeEdge(int edgeId, int nodeId, double cost, double score) {
+            edges.removeFirst(edgeId);
+            nodes.removeFirst(nodeId);
+            bitSet.remove(edgeId);
             this.cost -= cost;
             this.score -= score;
         }
-
     }
 
 
@@ -121,11 +140,10 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
      * Returns the shortest distance in meters between two nodes of the graph.
      */
     private double shortestPath(int s, int d) {
-        PrepareContractionHierarchies.DijkstraBidirectionCH search =
+        RoutingAlgorithm search =
                 new PrepareContractionHierarchies.DijkstraBidirectionCH(graph,
-                        shortestWeighting, TraversalMode.EDGE_BASED_2DIR);
-        // TODO (Aidan) Replace this edge filter with one that respects vehicles
-        search.setEdgeFilter(levelEdgeFilter);
+                        weighting, TraversalMode.NODE_BASED)
+                        .setEdgeFilter(levelEdgeFilter);
 
         Path path = search.calcPath(s, d);
         return path.getDistance();
