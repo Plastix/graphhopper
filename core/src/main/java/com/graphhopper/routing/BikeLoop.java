@@ -1,7 +1,6 @@
 package com.graphhopper.routing;
 
 import com.carrotsearch.hppc.IntArrayList;
-import com.carrotsearch.hppc.cursors.IntCursor;
 import com.graphhopper.coll.GHBitSet;
 import com.graphhopper.coll.GHBitSetImpl;
 import com.graphhopper.routing.ch.PrepareContractionHierarchies;
@@ -47,24 +46,21 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
     }
 
     private Path runILS(int s, int d) {
-        Solution solution = new Solution();
-        Path path = new Path(baseGraph, weighting);
-        if (localSearch(solution, s, d, maxCost, 0, maxDepth)) {
-            for (IntCursor edge : solution.edges) {
-                path.addEdge(edge.value);
-            }
-            return path
-                    .setEndNode(d)
-                    .setFromNode(s)
-                    .setFound(true);
+        Route route = new Route();
+        boolean found = localSearch(route, s, d, maxCost, 0, maxDepth);
+
+        isFinished = true;
+
+        if (found) {
+            return getPath(route, s, d);
         } else {
-            return path.setFound(false);
+            return getPath();
         }
     }
 
-    private boolean localSearch(Solution path, int s, int d, double dist,
+    private boolean localSearch(Route route, int s, int d, double dist,
                                 double minProfit, int maxDepth) {
-        if (maxDepth < 0 || shortestPath(s, d) > dist) {
+        if (maxDepth == 0) {
             return false;
         }
 
@@ -74,48 +70,67 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
 
         while (iter.next()) {
             int currentEdge = iter.getEdge();
+
+            if (route.bitSet.contains(currentEdge)) {
+                continue;
+            }
+
             double edgeCost = iter.getDistance();
             int nextNode = iter.getAdjNode();
 
             double remainingDist = dist - edgeCost;
             double shortestDist = shortestPath(nextNode, d);
 
-            if (!path.bitSet.contains(currentEdge) && shortestDist < remainingDist) {
-
-                double edgeScore = bikePriorityWeighting
-                        .calcWeight(iter, false, nextNode);
-
-                path.addEdge(currentEdge, nextNode, edgeCost, edgeScore);
-
-                if (nextNode == d &&
-                        path.cost >= minCost &&
-                        path.score > minProfit) {
-
-                    return true;
-                } else if (localSearch(path, nextNode, d, remainingDist,
-                        minProfit, maxDepth - 1)) {
-                    return true;
-                }
-
-                path.removeEdge(currentEdge, nextNode, edgeCost, edgeScore);
+            if (shortestDist >= remainingDist) {
+                continue;
             }
+
+            double edgeScore = bikePriorityWeighting
+                    .calcWeight(iter, false, nextNode);
+
+            route.addEdge(currentEdge, nextNode, edgeCost, edgeScore);
+
+            if (nextNode == d &&
+                    route.cost >= minCost &&
+                    route.score > minProfit) {
+                return true;
+            } else if (localSearch(route, nextNode, d, remainingDist,
+                    minProfit, maxDepth - 1)) {
+                return true;
+            }
+
+            route.removeEdge(currentEdge, nextNode, edgeCost, edgeScore);
         }
 
         return false;
     }
 
-    private static final class Solution {
+    private Path getPath(Route route, int s, int d) {
+        Path path = getPath();
+        for (int i = 0; i < route.edges.size(); i++) {
+            path.addEdge(route.edges.get(i));
+        }
+        return path
+                .setEndNode(d)
+                .setFromNode(s)
+                .setFound(!route.edges.isEmpty());
+    }
+
+    private Path getPath() {
+        return new Path(baseGraph, weighting);
+    }
+
+    private static final class Route {
         IntArrayList edges;
         IntArrayList nodes;
         GHBitSet bitSet;
         double cost;
         double score;
 
-        Solution() {
+        Route() {
             edges = new IntArrayList();
             nodes = new IntArrayList();
             bitSet = new GHBitSetImpl();
-            cost = 0;
         }
 
         void addEdge(int edgeId, int nodeId, double cost, double score) {
