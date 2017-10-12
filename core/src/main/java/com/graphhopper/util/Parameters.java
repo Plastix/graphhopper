@@ -127,6 +127,14 @@ public class Parameters {
          * a rectangle lat1,lon1,lat2,lon2
          */
         public static final String BLOCK_AREA = "block_area";
+
+        // TODO (Aidan) write documentation
+        public static final String MAX_DIST = "max_dist";
+        public static final double DEFAULT_MAX_DIST = 50_000; // in meters
+        public static final String MIN_DIST = "min_dist";
+        public static final double DEFAULT_MIN_DIST = 1_000; // in meters
+        public static final String SEARCH_DEPTH = "depth";
+        public static final int DEFAULT_SEARCH_DEPTH = 4;
     }
 
     /**

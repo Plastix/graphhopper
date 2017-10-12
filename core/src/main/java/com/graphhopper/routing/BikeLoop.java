@@ -12,31 +12,43 @@ import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.util.EdgeExplorer;
 import com.graphhopper.util.EdgeIterator;
+import com.graphhopper.util.PMap;
+
+import static com.graphhopper.util.Parameters.Routing.*;
 
 public class BikeLoop extends AbstractRoutingAlgorithm {
 
     private EdgeFilter levelEdgeFilter; // Used for CH Dijkstra search
     private EdgeFilter bikeEdgeFilter;
     private Weighting bikePriorityWeighting;
-
     private Graph baseGraph;
-    private boolean isFinished = false;
-    private int visitedNodes = 0;
+    private PMap params;
 
-    private double maxCost = 50_000; // in meters
-    private double minCost = 8_000; // in meters
-    private int maxDepth = 20;
+    private boolean isFinished = false;
+    private double maxCost;
+    private double minCost;
+    private int maxDepth;
 
     /**
      * @param graph specifies the graph where this algorithm will run on
      */
-    public BikeLoop(Graph graph, Weighting weighting, EdgeFilter levelEdgeFilter) {
+    public BikeLoop(Graph graph, Weighting weighting,
+                    EdgeFilter levelEdgeFilter, PMap params) {
         super(graph, weighting, TraversalMode.EDGE_BASED_1DIR);
 
         baseGraph = graph.getBaseGraph();
         this.levelEdgeFilter = levelEdgeFilter;
         bikeEdgeFilter = new DefaultEdgeFilter(flagEncoder);
         bikePriorityWeighting = new BikePriorityWeighting(flagEncoder);
+        this.params = params;
+
+        parseParams();
+    }
+
+    private void parseParams() {
+        maxCost = params.getDouble(MAX_DIST, DEFAULT_MAX_DIST);
+        minCost = params.getDouble(MIN_DIST, DEFAULT_MIN_DIST);
+        maxDepth = params.getInt(SEARCH_DEPTH, DEFAULT_SEARCH_DEPTH);
     }
 
     @Override
@@ -164,9 +176,10 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
         return path.getDistance();
     }
 
+    // Unused
     @Override
     public int getVisitedNodes() {
-        return visitedNodes;
+        return 0;
     }
 
     @Override
@@ -174,7 +187,7 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
         return isFinished;
     }
 
-    // Unused by this algorithm
+    // Unused
     @Override
     protected Path extractPath() {
         return null;
