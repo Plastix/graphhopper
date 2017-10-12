@@ -84,11 +84,16 @@ public class GraphHopperServlet extends GHBaseServlet {
         String algoStr = getParam(httpReq, "algorithm", "");
         String localeStr = getParam(httpReq, "locale", "en");
 
+        // Only used for bike route ILS algorithm
+        double maxDist = getDoubleParam(httpReq, MAX_DIST, DEFAULT_MAX_DIST);
+        double minDist = getDoubleParam(httpReq, MIN_DIST, DEFAULT_MIN_DIST);
+        int maxDepth = getIntParam(httpReq, SEARCH_DEPTH, DEFAULT_SEARCH_DEPTH);
+
         StopWatch sw = new StopWatch().start();
 
         if (!ghRsp.hasErrors()) {
             try {
-                if(requestPoints.isEmpty()){
+                if (requestPoints.isEmpty()) {
                     throw new IllegalArgumentException("You have to pass at least one point");
                 }
                 List<Double> favoredHeadings = Collections.EMPTY_LIST;
@@ -141,7 +146,10 @@ public class GraphHopperServlet extends GHBaseServlet {
                         getHints().
                         put(CALC_POINTS, calcPoints).
                         put(INSTRUCTIONS, enableInstructions).
-                        put(WAY_POINT_MAX_DISTANCE, minPathPrecision);
+                        put(WAY_POINT_MAX_DISTANCE, minPathPrecision).
+                        put(MAX_DIST, maxDist).
+                        put(MIN_DIST, minDist).
+                        put(SEARCH_DEPTH, maxDepth);
 
                 ghRsp = graphHopper.route(request);
             } catch (IllegalArgumentException ex) {
