@@ -118,9 +118,11 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
     }
 
     private Path getPath(Route route, int s, int d) {
+        int numEdges = route.edges.size();
         Path path = getPath();
-        for (int i = 0; i < route.edges.size(); i++) {
-            path.addEdge(route.edges.get(i));
+        for (int i = 0; i < numEdges; i++) {
+            int edgeId = route.edges.get(i);
+            path.processEdge(edgeId, route.nodes.get(i), edgeId);
         }
         return path
                 .setEndNode(d)
@@ -154,8 +156,8 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
         }
 
         void removeEdge(int edgeId, int nodeId, double cost, double score) {
-            edges.removeFirst(edgeId);
-            nodes.removeFirst(nodeId);
+            edges.removeLast(edgeId);
+            nodes.removeLast(nodeId);
             bitSet.remove(edgeId);
             this.cost -= cost;
             this.score -= score;
