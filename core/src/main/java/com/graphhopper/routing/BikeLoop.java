@@ -29,9 +29,7 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
     private double maxCost;
     private double minCost;
     private int maxDepth;
-    // TODO (Aidan) remove magic number
-    private int maxNoImprove = 5;
-    private int count;
+    private int maxIterations;
 
     /**
      * @param graph specifies the graph where this algorithm will run on
@@ -53,7 +51,7 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
         maxCost = params.getDouble(MAX_DIST, DEFAULT_MAX_DIST);
         minCost = params.getDouble(MIN_DIST, DEFAULT_MIN_DIST);
         maxDepth = params.getInt(SEARCH_DEPTH, DEFAULT_SEARCH_DEPTH);
-        count = params.getInt("count", 2);
+        maxIterations = params.getInt(MAX_ITERATIONS, DEFAULT_MAX_ITERATIONS);
     }
 
     @Override
@@ -65,7 +63,7 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
     private Path runILS(int s, int d) {
         Route solution = initialize(s, d);
 
-        solution = improve(solution, s, d, maxNoImprove);
+        solution = improve(solution, s, d);
 
         isFinished = true;
 
@@ -73,13 +71,11 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
 
     }
 
-    private Route improve(Route solution, int s, int d, int maxNoImprove) {
+    private Route improve(Route solution, int s, int d) {
         Route newPath = new Route();
-        int a = 1, r = 1, noImprove = 0;
-        int c = 0;
-        while (c < count) {
+        int a = 1, r = 1, count = 0;
+        while (count < maxIterations) {
             Route temp = solution.copy();
-//        while (noImprove < maxNoImprove) {
             int size = temp.edges.size();
 
             if (r > size) {
@@ -112,17 +108,15 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
                     minScore, maxDepth)) {
                 temp.splice(newPath, a - 1);
                 solution = temp;
-                noImprove = 0;
                 a = 1;
                 r = 1;
             } else {
-                noImprove++;
                 a++;
                 r++;
             }
             // Clear temp path so we can use it again
             newPath.clear();
-            c++;
+            count++;
         }
 
         return solution;

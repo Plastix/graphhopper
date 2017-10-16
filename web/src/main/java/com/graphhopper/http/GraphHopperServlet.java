@@ -88,7 +88,7 @@ public class GraphHopperServlet extends GHBaseServlet {
         double maxDist = getDoubleParam(httpReq, MAX_DIST, DEFAULT_MAX_DIST);
         double minDist = getDoubleParam(httpReq, MIN_DIST, DEFAULT_MIN_DIST);
         int maxDepth = getIntParam(httpReq, SEARCH_DEPTH, DEFAULT_SEARCH_DEPTH);
-        int count = getIntParam(httpReq, "count", 1);
+        int iterations = getIntParam(httpReq, MAX_ITERATIONS, DEFAULT_MAX_ITERATIONS);
 
         StopWatch sw = new StopWatch().start();
 
@@ -151,7 +151,7 @@ public class GraphHopperServlet extends GHBaseServlet {
                         put(MAX_DIST, maxDist).
                         put(MIN_DIST, minDist).
                         put(SEARCH_DEPTH, maxDepth)
-                        .put("counter", count);
+                        .put(MAX_ITERATIONS, iterations);
 
                 ghRsp = graphHopper.route(request);
             } catch (IllegalArgumentException ex) {
