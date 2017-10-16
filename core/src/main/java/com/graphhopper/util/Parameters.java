@@ -135,6 +135,8 @@ public class Parameters {
         public static final double DEFAULT_MIN_DIST = 1_000; // in meters
         public static final String SEARCH_DEPTH = "depth";
         public static final int DEFAULT_SEARCH_DEPTH = 4;
+        public static final String MAX_ITERATIONS = "max_iterations";
+        public static final int DEFAULT_MAX_ITERATIONS = 20;
     }
 
     /**
