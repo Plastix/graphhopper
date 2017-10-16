@@ -31,6 +31,7 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
     private int maxDepth;
     // TODO (Aidan) remove magic number
     private int maxNoImprove = 5;
+    private int count;
 
     /**
      * @param graph specifies the graph where this algorithm will run on
@@ -52,6 +53,7 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
         maxCost = params.getDouble(MAX_DIST, DEFAULT_MAX_DIST);
         minCost = params.getDouble(MIN_DIST, DEFAULT_MIN_DIST);
         maxDepth = params.getInt(SEARCH_DEPTH, DEFAULT_SEARCH_DEPTH);
+        count = params.getInt("count", 2);
     }
 
     @Override
@@ -63,7 +65,7 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
     private Path runILS(int s, int d) {
         Route solution = initialize(s, d);
 
-//        solution = improve(solution, s, d, maxNoImprove);
+        solution = improve(solution, s, d, maxNoImprove);
 
         isFinished = true;
 
@@ -72,10 +74,12 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
     }
 
     private Route improve(Route solution, int s, int d, int maxNoImprove) {
-        Route temp = solution.copy();
         Route newPath = new Route();
         int a = 1, r = 1, noImprove = 0;
-        while (noImprove < maxNoImprove) {
+        int c = 0;
+        while (c < count) {
+            Route temp = solution.copy();
+//        while (noImprove < maxNoImprove) {
             int size = temp.edges.size();
 
             if (r > size) {
@@ -90,7 +94,7 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
             double minScore = 0;
             int startId = s, endId = d;
             for (int i = 0; i < r; i++) {
-                Route.Arc arc = temp.removeEdgeIndex(a + i - 1);
+                Route.Arc arc = temp.removeEdgeIndex(a - 1);
                 minScore += arc.score;
 
                 if (i == 0) {
@@ -102,21 +106,26 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
                 }
             }
 
-            if (localSearch(newPath, startId, endId, maxCost - solution.cost,
+            // Don't allow search to traverse roads already in our path
+            newPath.blacklist(temp);
+            if (localSearch(newPath, startId, endId, maxCost - temp.cost,
                     minScore, maxDepth)) {
                 temp.splice(newPath, a - 1);
+                solution = temp;
                 noImprove = 0;
                 a = 1;
                 r = 1;
             } else {
-                newPath.clear();
                 noImprove++;
                 a++;
                 r++;
             }
+            // Clear temp path so we can use it again
+            newPath.clear();
+            c++;
         }
 
-        return temp;
+        return solution;
     }
 
     private Route initialize(int s, int d) {
@@ -237,7 +246,7 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
             Arc arc = edges.remove(index);
             bitSet.clear(arc.edgeId);
             cost -= arc.cost;
-            score = arc.score;
+            score -= arc.score;
             return arc;
         }
 
@@ -259,6 +268,22 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
             score += other.score;
         }
 
+        void blacklist(Route other) {
+            bitSet.or(other.bitSet);
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder stringBuilder = new StringBuilder();
+            for (Arc edge : edges) {
+                stringBuilder.append("(")
+                        .append(edge.baseNode)
+                        .append(",")
+                        .append(edge.adjNode)
+                        .append(") ->");
+            }
+            return stringBuilder.toString();
+        }
 
         private class Arc {
             int edgeId, baseNode, adjNode;
@@ -270,6 +295,13 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
                 this.adjNode = adjNode;
                 this.cost = cost;
                 this.score = score;
+            }
+
+            @Override
+            public String toString() {
+                return "Arc{" +
+                        "edgeId=" + edgeId +
+                        '}';
             }
         }
     }
