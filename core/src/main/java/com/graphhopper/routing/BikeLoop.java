@@ -7,8 +7,8 @@ import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.weighting.BikePriorityWeighting;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
-import com.graphhopper.util.EdgeExplorer;
 import com.graphhopper.util.EdgeIterator;
+import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.PMap;
 
 import java.util.ArrayList;
@@ -61,9 +61,13 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
     }
 
     private Path runILS(int s, int d) {
-        Route solution = initialize(s, d);
-
-        solution = improve(solution, s, d);
+        Route solution;
+        if (shortestPath(s, d).getDistance() > maxCost) {
+            solution = new Route();
+        } else {
+            // TODO (Aidan)
+            solution = initialize(s, d);
+        }
 
         isFinished = true;
 
@@ -71,119 +75,68 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
 
     }
 
-    private Route improve(Route solution, int s, int d) {
-        Route newPath = new Route();
-        int a = 1, r = 1, count = 0;
-        while (count < maxIterations) {
-            Route temp = solution.copy();
-            int size = temp.edges.size();
-
-            if (r > size) {
-                r = 1;
-            }
-
-            if (a + r > size - 1) {
-                r = size - 1 - a;
-            }
-
-            // Remove arcs a - r
-            double minScore = 0;
-            int startId = s, endId = d;
-            for (int i = 0; i < r; i++) {
-                Route.Arc arc = temp.removeEdgeIndex(a - 1);
-                minScore += arc.score;
-
-                if (i == 0) {
-                    startId = arc.baseNode;
-                }
-
-                if (i == r - 1) {
-                    endId = arc.adjNode;
-                }
-            }
-
-            // Don't allow search to traverse roads already in our path
-            newPath.blacklist(temp);
-            if (localSearch(newPath, startId, endId, maxCost - temp.cost,
-                    minScore, maxDepth)) {
-                temp.splice(newPath, a - 1);
-                solution = temp;
-                a = 1;
-                r = 1;
-            } else {
-                a++;
-                r++;
-            }
-            // Clear temp path so we can use it again
-            newPath.clear();
-            count++;
-        }
-
-        return solution;
-    }
-
     private Route initialize(int s, int d) {
         Route route = new Route();
+        Arc arc = new Arc(-1, s, d, maxCost, 0,
+                computeCAS(null, s, d, maxCost));
 
-        if (!localSearch(route, s, d, maxCost, 0, maxDepth)) {
-            route.clear();
-        }
+        route.addArc(arc);
 
         return route;
     }
 
-    private boolean localSearch(Route route, int s, int d, double dist,
-                                double minProfit, int maxDepth) {
-        if (maxDepth == 0) {
-            return false;
+    private List<Arc> computeCAS(List<Arc> cas, int s, int d, double cost) {
+        List<Arc> result = new ArrayList<>();
+
+        if (cas == null) {
+            cas = new ArrayList<>();
+            EdgeIterator edgeIterator = graph.getAllEdges();
+            while (edgeIterator.next()) {
+                int edge = edgeIterator.getEdge();
+                int baseNode = edgeIterator.getBaseNode();
+                int adjNode = edgeIterator.getAdjNode();
+                double edgeCost = edgeIterator.getDistance();
+
+                double edgeScore = bikePriorityWeighting
+                        .calcWeight(edgeIterator, false, baseNode);
+
+                cas.add(new Arc(edge, baseNode, adjNode, edgeCost, edgeScore, null));
+
+            }
         }
 
-        // Make sure to use baseGraph for traversal (non-CH version)
-        EdgeExplorer explorer = baseGraph.createEdgeExplorer(bikeEdgeFilter);
-        EdgeIterator iter = explorer.setBaseNode(s);
-
-        while (iter.next()) {
-            int currentEdge = iter.getEdge();
-
-            if (route.bitSet.get(currentEdge)) {
-                continue;
+        for (Arc arc : cas) {
+            if (arc.score > 0 &&
+                    shortestPath(s, arc.baseNode).getDistance() +
+                            arc.cost +
+                            shortestPath(arc.adjNode, d).getDistance() <= cost) {
+                result.add(arc);
             }
+        }
+        return result;
+    }
 
-            double edgeCost = iter.getDistance();
-            int nextNode = iter.getAdjNode();
+    private double getQualityRatio(int s, int d, Arc arc) {
+        Path sp1 = shortestPath(s, arc.baseNode);
+        Path sp2 = shortestPath(arc.adjNode, d);
 
-            double remainingDist = dist - edgeCost;
-            double shortestDist = shortestPath(nextNode, d);
+        double value = 0;
 
-            if (shortestDist >= remainingDist) {
-                continue;
-            }
+        List<EdgeIteratorState> edges = sp1.calcEdges();
+        edges.addAll(sp2.calcEdges());
 
-            double edgeScore = bikePriorityWeighting
-                    .calcWeight(iter, false, nextNode);
-
-            route.addEdge(currentEdge, s, nextNode, edgeCost, edgeScore);
-
-            if (nextNode == d &&
-                    route.cost >= minCost &&
-                    route.score > minProfit) {
-                return true;
-            } else if (localSearch(route, nextNode, d, remainingDist,
-                    minProfit, maxDepth - 1)) {
-                return true;
-            }
-
-            route.removeEdge(currentEdge);
+        for (EdgeIteratorState edge : edges) {
+            value += bikePriorityWeighting.calcWeight(edge, false, edge.getBaseNode());
         }
 
-        return false;
+        return value / (sp1.getDistance() + arc.cost + sp2.getDistance());
     }
 
     private Path getPath(Route route, int s, int d) {
         int numEdges = route.edges.size();
         Path path = getPath();
         for (int i = 0; i < numEdges; i++) {
-            Route.Arc arc = route.edges.get(i);
+            Arc arc = route.edges.get(i);
             path.processEdge(arc.edgeId, arc.adjNode, arc.edgeId);
         }
         return path
@@ -215,12 +168,11 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
             bitSet = (BitSet) route.bitSet.clone();
         }
 
-
-        void addEdge(int edgeId, int baseNode, int adjNode, double cost, double score) {
-            edges.add(new Arc(edgeId, baseNode, adjNode, cost, score));
-            bitSet.set(edgeId);
-            this.cost += cost;
-            this.score += score;
+        void addArc(Arc arc) {
+            edges.add(arc);
+            bitSet.set(arc.edgeId);
+            this.cost += arc.cost;
+            this.score += arc.score;
         }
 
         void removeEdge(int edgeId) {
@@ -279,24 +231,29 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
             return stringBuilder.toString();
         }
 
-        private class Arc {
-            int edgeId, baseNode, adjNode;
-            double cost, score;
 
-            Arc(int edgeId, int baseNode, int adjNode, double cost, double score) {
-                this.edgeId = edgeId;
-                this.baseNode = baseNode;
-                this.adjNode = adjNode;
-                this.cost = cost;
-                this.score = score;
-            }
+    }
 
-            @Override
-            public String toString() {
-                return "Arc{" +
-                        "edgeId=" + edgeId +
-                        '}';
-            }
+    private static class Arc {
+        int edgeId, baseNode, adjNode;
+        double cost, score, improvePotential, qualityRatio;
+        List<Arc> cas;
+
+        Arc(int edgeId, int baseNode, int adjNode, double cost, double score, List<Arc> cas) {
+            this.edgeId = edgeId;
+            this.baseNode = baseNode;
+            this.adjNode = adjNode;
+            this.cost = cost;
+            this.score = score;
+            this.cas = cas;
+            this.improvePotential = Double.MAX_VALUE;
+        }
+
+        @Override
+        public String toString() {
+            return "Arc{" +
+                    "edgeId=" + edgeId +
+                    '}';
         }
     }
 
@@ -304,14 +261,13 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
     /**
      * Returns the shortest distance in meters between two nodes of the graph.
      */
-    private double shortestPath(int s, int d) {
+    private Path shortestPath(int s, int d) {
         RoutingAlgorithm search =
                 new PrepareContractionHierarchies.DijkstraBidirectionCH(graph,
                         weighting, TraversalMode.NODE_BASED)
                         .setEdgeFilter(levelEdgeFilter);
 
-        Path path = search.calcPath(s, d);
-        return path.getDistance();
+        return search.calcPath(s, d);
     }
 
     // Unused
