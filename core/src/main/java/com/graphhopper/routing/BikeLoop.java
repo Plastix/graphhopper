@@ -12,7 +12,6 @@ import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.PMap;
 
 import java.util.ArrayList;
-import java.util.BitSet;
 import java.util.List;
 
 import static com.graphhopper.util.Parameters.Routing.*;
@@ -65,8 +64,8 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
         if (shortestPath(s, d).getDistance() > maxCost) {
             solution = new Route();
         } else {
-            // TODO (Aidan)
             solution = initialize(s, d);
+            // TODO (Aidan)
         }
 
         isFinished = true;
@@ -78,10 +77,9 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
     private Route initialize(int s, int d) {
         Route route = new Route();
         // Add fake edge to start solution
-        Arc arc = new Arc(-1, s, d, maxCost, 0,
-                computeCAS(null, s, d, maxCost));
-
-        route.addArc(arc);
+        Arc arc = new Arc(-1, s, d, maxCost, 0);
+        arc.cas = computeCAS(null, s, d, maxCost);
+        route.addArc(0, arc);
 
         return route;
     }
@@ -106,18 +104,34 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
                 double edgeScore = bikePriorityWeighting
                         .calcWeight(edgeIterator, false, baseNode);
 
-                cas.add(new Arc(edge, baseNode, adjNode, edgeCost, edgeScore, null));
-
+                cas.add(new Arc(edge, baseNode, adjNode, edgeCost, edgeScore));
             }
         }
 
         for (Arc arc : cas) {
-            if (arc.score > 0 && fullPathCost(s, d, arc) <= cost) {
+            if (arc.score > 0 && getPathCost(s, d, arc) <= cost) {
                 arc.qualityRatio = getQualityRatio(s, d, arc);
                 result.add(arc);
             }
         }
         return result;
+    }
+
+    private List<Arc> updateCAS(Route route, Arc arc, int s, int d, double newBudget) {
+        List<Arc> cas = new ArrayList<>();
+        double oldBudget = route.score - arc.score;
+
+        if (newBudget < oldBudget) {
+            for (Arc ca : arc.cas) {
+                if (getPathCost(s, d, arc) <= newBudget) {
+                    cas.add(ca);
+                }
+            }
+        } else if(newBudget > oldBudget) {
+            // TODO
+        }
+
+        return cas;
     }
 
     private double getQualityRatio(int s, int d, Arc arc) {
@@ -136,34 +150,8 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
         return value / (sp1.getDistance() + arc.cost + sp2.getDistance());
     }
 
-    private double getImprovePotential(Arc arc) {
-        if (arc.cas == null) {
-            return 0;
-        }
-
-        double sum = 0;
-        double max = Double.MIN_VALUE;
-
-        for (Arc casArc : arc.cas) {
-            sum += (casArc.score - arc.score);
-
-
-        }
-
-        return sum / (max -;
-    }
-
     private Path getPath(Route route, int s, int d) {
-        int numEdges = route.edges.size();
-        Path path = getPath();
-        for (int i = 0; i < numEdges; i++) {
-            Arc arc = route.edges.get(i);
-            path.processEdge(arc.edgeId, arc.adjNode, arc.edgeId);
-        }
-        return path
-                .setEndNode(d)
-                .setFromNode(s)
-                .setFound(!route.edges.isEmpty());
+        return null;
     }
 
     private Path getPath() {
@@ -171,85 +159,18 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
     }
 
     private static final class Route {
-        List<Arc> edges;
-        BitSet bitSet;
+        List<Arc> arcs;
         double cost;
         double score;
 
-        Route() {
-            edges = new ArrayList<>();
-            bitSet = new BitSet();
+        public Route() {
+            arcs = new ArrayList<>();
         }
 
-        // Copy constructor
-        Route(Route route) {
-            cost = route.cost;
-            score = route.score;
-            edges = new ArrayList<>(route.edges);
-            bitSet = (BitSet) route.bitSet.clone();
-        }
-
-        void addArc(Arc arc) {
-            edges.add(arc);
-            bitSet.set(arc.edgeId);
-            this.cost += arc.cost;
-            this.score += arc.score;
-        }
-
-        void removeEdge(int edgeId) {
-            for (int i = edges.size() - 1; i >= 0; i--) {
-                Arc arc = edges.get(i);
-                if (arc.edgeId == edgeId) {
-                    edges.remove(i);
-                    bitSet.clear(edgeId);
-                    cost -= arc.cost;
-                    score -= arc.score;
-                    break;
-                }
-            }
-        }
-
-        Arc removeEdgeIndex(int index) {
-            Arc arc = edges.remove(index);
-            bitSet.clear(arc.edgeId);
-            cost -= arc.cost;
-            score -= arc.score;
-            return arc;
-        }
-
-        void clear() {
-            edges.clear();
-            bitSet.clear();
-            cost = 0;
-            score = 0;
-        }
-
-        Route copy() {
-            return new Route(this);
-        }
-
-        void splice(Route other, int index) {
-            edges.addAll(index, other.edges);
-            bitSet.or(other.bitSet);
-            cost += other.cost;
-            score += other.score;
-        }
-
-        void blacklist(Route other) {
-            bitSet.or(other.bitSet);
-        }
-
-        @Override
-        public String toString() {
-            StringBuilder stringBuilder = new StringBuilder();
-            for (Arc edge : edges) {
-                stringBuilder.append("(")
-                        .append(edge.baseNode)
-                        .append(",")
-                        .append(edge.adjNode)
-                        .append(") ->");
-            }
-            return stringBuilder.toString();
+        void addArc(int index, Arc arc) {
+            arcs.add(index, arc);
+            cost += arc.cost;
+            score += arc.score;
         }
 
 
@@ -260,13 +181,12 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
         double cost, score, improvePotential, qualityRatio;
         List<Arc> cas;
 
-        Arc(int edgeId, int baseNode, int adjNode, double cost, double score, List<Arc> cas) {
+        Arc(int edgeId, int baseNode, int adjNode, double cost, double score) {
             this.edgeId = edgeId;
             this.baseNode = baseNode;
             this.adjNode = adjNode;
             this.cost = cost;
             this.score = score;
-            this.cas = cas;
             this.improvePotential = Double.MAX_VALUE;
         }
 
@@ -276,13 +196,13 @@ public class BikeLoop extends AbstractRoutingAlgorithm {
                     "edgeId=" + edgeId +
                     '}';
         }
+
     }
 
-    private double fullPathCost(int s, int d, Arc arc) {
+    private double getPathCost(int s, int d, Arc arc) {
         return shortestPath(s, arc.baseNode).getDistance() + arc.cost +
                 shortestPath(arc.adjNode, d).getDistance();
     }
-
 
     /**
      * Returns the shortest distance in meters between two nodes of the graph.
