@@ -1,6 +1,7 @@
 package com.graphhopper.routing.ils;
 
 import com.graphhopper.routing.Path;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -72,6 +73,14 @@ final class Route {
         score += arc.score;
     }
 
+    public void removeArc(Arc a) {
+        throw new NotImplementedException();
+    }
+
+    public void insertRoute(int index, Route route) {
+        throw new NotImplementedException();
+    }
+
     public double getCost() {
         return cost;
     }
@@ -82,11 +91,31 @@ final class Route {
 
     // TODO (Aidan)
     public Path getPath() {
-        return null;
+        throw new NotImplementedException();
     }
 
     public int getNumArcs() {
         return arcs.size();
+    }
+
+    public List<Arc> getArcs() {
+        return arcs;
+    }
+
+    public Arc getPrev(Arc a) {
+        int index = arcs.indexOf(a);
+
+        return (index != -1 && index - 1 >= 0) ? arcs.get(index - 1) : a;
+    }
+
+    public Arc getNext(Arc a) {
+        int index = arcs.indexOf(a);
+
+        return (index != -1 && index + 1 <= getNumArcs() - 1) ? arcs.get(index + 1) : a;
+    }
+
+    public boolean contains(Arc a) {
+        return arcs.contains(a);
     }
 
     public Segment getSmallestSegment() {
@@ -112,7 +141,7 @@ final class Route {
         final int startNode, endNode, arcIndex;
         final double cost;
 
-        public Segment(int startNode, int endNode, int arcIndex, double cost) {
+        Segment(int startNode, int endNode, int arcIndex, double cost) {
             this.startNode = startNode;
             this.endNode = endNode;
             this.arcIndex = arcIndex;
