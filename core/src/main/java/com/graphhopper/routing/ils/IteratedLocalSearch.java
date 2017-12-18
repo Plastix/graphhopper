@@ -33,8 +33,6 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
     private boolean isFinished = false;
     private double maxCost;
-    private double minCost;
-    private int maxDepth;
     private int maxIterations;
 
     /**
@@ -56,8 +54,6 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
     private void parseParams() {
         maxCost = params.getDouble(MAX_DIST, DEFAULT_MAX_DIST);
-        minCost = params.getDouble(MIN_DIST, DEFAULT_MIN_DIST);
-        maxDepth = params.getInt(SEARCH_DEPTH, DEFAULT_SEARCH_DEPTH);
         maxIterations = params.getInt(MAX_ITERATIONS, DEFAULT_MAX_ITERATIONS);
     }
 
@@ -79,14 +75,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                     arc.improvePotential = calcImprovePotential(arc, solution);
                 }
 
-                List<Arc> arcs = new ArrayList<>();
-                double avgIP = getAverageImprovePotential(solution.getArcs());
-                for(Arc ca : solution.getArcs()) {
-                    if(ca.qualityRatio >= avgIP) {
-                        arcs.add(ca);
-                    }
-                }
-
+                List<Arc> arcs = getCandidateArcsByIP(solution.getArcs());
                 int index = random.nextInt(arcs.size());
                 Arc e = arcs.remove(index);
 
@@ -103,9 +92,9 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
                         Arc prev = solution.getPrev(arc);
                         Arc next = solution.getNext(arc);
-                        if(solution.contains(arc) || arc.equals(prev) || arc.equals(next)){
+                        if(solution.contains(arc) || arc.equals(prev) || arc.equals(next)) {
                             arc.setCas(computeCAS(null, prev.adjNode, next.baseNode, b2));
-                        }else{
+                        } else {
                             // TODO budgets???
                             arc.setCas(updateCAS(arc, prev.adjNode, next.baseNode, b1, b2));
                         }
@@ -151,7 +140,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     private List<Arc> getAllArcs() {
         List<Arc> arcs = new ArrayList<>();
 
-        EdgeIterator edgeIterator = graph.getAllEdges();
+        EdgeIterator edgeIterator = baseGraph.getAllEdges();
         while(edgeIterator.next()) {
 
             if(!bikeEdgeFilter.accept(edgeIterator)) {
@@ -210,7 +199,6 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     }
 
     private double calcImprovePotential(Arc arc, Route route) {
-        // TODO (Aidan)
         int v1 = route.getPrev(arc).adjNode;
         int v2 = route.getNext(arc).baseNode;
 
@@ -227,24 +215,38 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         return score / (maxDist - dist);
     }
 
-    private double getAverageQualityRatio(List<Arc> cas) {
+    private List<Arc> getCandidateArcsByQR(List<Arc> cas) {
+        List<Arc> arcs = new ArrayList<>();
         double avgQR = 0;
         for(Arc ca : cas) {
             avgQR += ca.qualityRatio;
         }
         avgQR /= cas.size();
 
-        return avgQR;
+        for(Arc ca : cas) {
+            if(ca.qualityRatio >= avgQR) {
+                arcs.add(ca);
+            }
+        }
+
+        return arcs;
     }
 
-    private double getAverageImprovePotential(List<Arc> cas) {
+    private List<Arc> getCandidateArcsByIP(List<Arc> solutionArcs) {
+        List<Arc> arcs = new ArrayList<>();
         double avgIP = 0;
-        for(Arc ca : cas) {
+        for(Arc ca : solutionArcs) {
             avgIP += ca.improvePotential;
         }
-        avgIP /= cas.size();
+        avgIP /= solutionArcs.size();
 
-        return avgIP;
+        for(Arc ca : solutionArcs) {
+            if(ca.improvePotential >= avgIP) {
+                arcs.add(ca);
+            }
+        }
+
+        return arcs;
     }
 
     private Route generatePath(int s, int d, double dist, double minProfit, List<Arc> cas) {
@@ -252,26 +254,13 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         Route route = Route.newRoute(this);
         route.addArc(0, init);
 
-        List<Arc> arcs = new ArrayList<>();
-        double avgQR = getAverageQualityRatio(cas);
-        for(Arc ca : cas) {
-            if(ca.qualityRatio >= avgQR) {
-                arcs.add(ca);
-            }
-        }
-
+        List<Arc> arcs = getCandidateArcsByQR(cas);
         while(!arcs.isEmpty() && route.getCost() < dist) {
             int randomIndex = random.nextInt(arcs.size());
             Arc e = arcs.remove(randomIndex);
-
-            Route.Segment minSegment = route.getSmallestSegment();
-
-            if(getPathCost(minSegment.startNode, minSegment.endNode, e) <=
-                    dist - route.getCost() + minSegment.cost) {
-                route.addArc(minSegment.arcIndex, e);
-            }
+            // TODO correct budget??
+            route.insertArcAtSmallestFeasibleSegment(e, dist);
         }
-
 
         if(route.getScore() > minProfit) {
             return route;
@@ -281,14 +270,11 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
     }
 
-    private double getPathCost(int s, int d, @NotNull Arc arc) {
+    public double getPathCost(int s, int d, @NotNull Arc arc) {
         return shortestPath(s, arc.baseNode).getDistance() + arc.cost +
                 shortestPath(arc.adjNode, d).getDistance();
     }
 
-    /**
-     * Returns the shortest distance in meters between two nodes of the graph.
-     */
     public Path shortestPath(int s, int d) {
         RoutingAlgorithm search =
                 new PrepareContractionHierarchies.DijkstraBidirectionCH(graph,

@@ -210,7 +210,7 @@ final class Route {
         return arcs.contains(a);
     }
 
-    public Segment getSmallestSegment() {
+    public void insertArcAtSmallestFeasibleSegment(Arc arc, double budget) {
         int index = -1;
         double min = Double.MAX_VALUE;
 
@@ -226,18 +226,9 @@ final class Route {
         int start = arcs.get(arcIndex - 1).adjNode;
         int end = arcs.get(arcIndex + 1).baseNode;
 
-        return new Segment(start, end, arcIndex, min);
-    }
-
-    public class Segment {
-        final int startNode, endNode, arcIndex;
-        final double cost;
-
-        Segment(int startNode, int endNode, int arcIndex, double cost) {
-            this.startNode = startNode;
-            this.endNode = endNode;
-            this.arcIndex = arcIndex;
-            this.cost = cost;
+        if(sp.getPathCost(start, end, arc) <=
+                budget - getCost() + min) {
+            addArc(arcIndex, arc);
         }
     }
 }
