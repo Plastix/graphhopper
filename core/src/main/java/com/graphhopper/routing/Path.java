@@ -111,7 +111,7 @@ public class Path {
         edgeIds.add(edge);
     }
 
-    protected Path setEndNode(int end) {
+    public Path setEndNode(int end) {
         endNode = end;
         return this;
     }
@@ -129,7 +129,7 @@ public class Path {
     /**
      * We need to remember fromNode explicitly as its not saved in one edgeId of edgeIds.
      */
-    protected Path setFromNode(int from) {
+    public Path setFromNode(int from) {
         fromNode = from;
         return this;
     }
@@ -236,7 +236,7 @@ public class Path {
      * @param prevEdgeId here the edge that comes before edgeId is necessary. I.e. for the reverse search we need the
      *                   next edge.
      */
-    protected void processEdge(int edgeId, int adjNode, int prevEdgeId) {
+    public void processEdge(int edgeId, int adjNode, int prevEdgeId) {
         EdgeIteratorState iter = graph.getEdgeIteratorState(edgeId, adjNode);
         distance += iter.getDistance();
         time += weighting.calcMillis(iter, false, prevEdgeId);

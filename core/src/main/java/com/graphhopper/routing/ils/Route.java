@@ -1,7 +1,8 @@
 package com.graphhopper.routing.ils;
 
 import com.graphhopper.routing.Path;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+import com.graphhopper.routing.weighting.Weighting;
+import com.graphhopper.storage.Graph;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -183,16 +184,24 @@ final class Route {
         return score;
     }
 
-    // TODO (Aidan)
-    public Path getPath(int s, int d) {
-        throw new NotImplementedException();
+    public Path getPath(int s, int d, Graph graph, Weighting weighting) {
+        Path path = new Path(graph, weighting);
+
+        for(Arc arc : arcs) {
+            path.processEdge(arc.edgeId, arc.adjNode, arc.edgeId);
+        }
+
+        return path
+                .setEndNode(d)
+                .setFromNode(s)
+                .setFound(!isEmpty());
     }
 
     public int getNumArcs() {
         return arcs.size();
     }
 
-    public boolean isEmpty(){
+    public boolean isEmpty() {
         return getNumArcs() == 0;
     }
 
