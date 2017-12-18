@@ -74,7 +74,37 @@ final class Route {
     }
 
     public void removeArc(Arc a) {
-        throw new NotImplementedException();
+        int index = arcs.indexOf(a);
+
+        if(index != -1) {
+            int length = getNumArcs();
+            Arc arc = arcs.get(index);
+
+            if(index == 0) {
+                blankSegments.remove(0);
+            } else if(index == length - 1) {
+                // For n arcs there are n-1 blank path segments
+                blankSegments.remove(index - 1);
+            } else {
+                Arc prevArc = arcs.get(index - 1);
+                Arc nextArc = arcs.get(index + 1);
+
+                double segment = sp.shortestPath(prevArc.adjNode, nextArc.baseNode).getDistance();
+
+                double cost1 = blankSegments.remove(index - 1);
+                double cost2 = blankSegments.remove(index - 1);
+
+                cost -= cost1;
+                cost -= cost2;
+
+                blankSegments.add(index - 1, segment);
+                cost += segment;
+            }
+
+            arcs.remove(index);
+            cost -= arc.cost;
+            score -= arc.score;
+        }
     }
 
     public void insertRoute(int index, Route route) {
