@@ -104,7 +104,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
         isFinished = true;
 
-        return solution.getPath(s, d);
+        return solution.getPath(s, d, baseGraph, weighting);
     }
 
     private Route initialize(int s, int d) {
