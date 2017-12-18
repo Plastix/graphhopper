@@ -76,7 +76,7 @@ final class Route {
         score += arc.score;
     }
 
-    public void removeArc(Arc a) {
+    public int removeArc(Arc a) {
         int index = arcs.indexOf(a);
 
         if(index != -1) {
@@ -117,6 +117,8 @@ final class Route {
             cost -= a.cost;
             score -= a.score;
         }
+
+        return index;
     }
 
     public void insertRoute(int index, Route route) {
@@ -125,7 +127,7 @@ final class Route {
             throw new IndexOutOfBoundsException();
         }
 
-        if(length != 0 && route.getNumArcs() != 0) {
+        if(length != 0 && !route.isEmpty()) {
             if(index == 0) {
                 // Add route to beginning of path: only requires inserting one blank path segment
                 // 4-5-6 --> 1-2-3-4-5-6
@@ -182,12 +184,16 @@ final class Route {
     }
 
     // TODO (Aidan)
-    public Path getPath() {
+    public Path getPath(int s, int d) {
         throw new NotImplementedException();
     }
 
     public int getNumArcs() {
         return arcs.size();
+    }
+
+    public boolean isEmpty(){
+        return getNumArcs() == 0;
     }
 
     public List<Arc> getArcs() {
