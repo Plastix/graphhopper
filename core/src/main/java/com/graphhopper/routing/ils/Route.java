@@ -22,6 +22,8 @@ final class Route {
         sp = shortestPathCalculator;
         arcs = new ArrayList<>();
         blankSegments = new ArrayList<>();
+        cost = 0;
+        score = 0;
     }
 
     public static Route newRoute(ShortestPathCalculator shortestPathCalculator) {
@@ -197,7 +199,7 @@ final class Route {
                 .setFound(!isEmpty());
     }
 
-    public int getNumArcs() {
+    private int getNumArcs() {
         return arcs.size();
     }
 
