@@ -209,6 +209,41 @@ final class Route {
         return arcs;
     }
 
+    public List<Arc> getCandidateArcsByIP() {
+        List<Arc> result = new ArrayList<>();
+        double avgIP = 0;
+        for(Arc ca : arcs) {
+            ca.improvePotential = calcImprovePotential(ca);
+            avgIP += ca.improvePotential;
+        }
+        avgIP /= arcs.size();
+
+        for(Arc ca : arcs) {
+            if(ca.improvePotential >= avgIP) {
+                result.add(ca);
+            }
+        }
+
+        return result;
+    }
+
+    private double calcImprovePotential(Arc arc) {
+        int v1 = getPrev(arc).adjNode;
+        int v2 = getNext(arc).baseNode;
+
+        double score = 0;
+        double maxDist = 0;
+
+        double dist = sp.getPathCost(v1, v2, arc);
+
+        for(Arc e : arc.getCas()) {
+            score += e.score - arc.score;
+            maxDist = Math.max(maxDist, sp.getPathCost(v1, v2, e));
+        }
+
+        return score / (maxDist - dist);
+    }
+
     public Arc getPrev(Arc a) {
         int index = arcs.indexOf(a);
 
