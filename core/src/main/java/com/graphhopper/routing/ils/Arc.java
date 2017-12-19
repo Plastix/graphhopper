@@ -20,7 +20,9 @@ final class Arc {
         this.adjNode = adjNode;
         this.cost = cost;
         this.score = score;
-        this.improvePotential = Double.MIN_VALUE;
+        improvePotential = -1;
+        qualityRatio = -1;
+
     }
 
     @Override
