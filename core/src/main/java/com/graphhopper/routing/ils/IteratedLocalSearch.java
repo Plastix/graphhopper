@@ -71,11 +71,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
             solution = initialize(s, d);
 
             for(int i = 0; i < maxIterations; i++) {
-                for(Arc arc : solution.getArcs()) {
-                    arc.improvePotential = calcImprovePotential(arc, solution);
-                }
-
-                List<Arc> arcs = getCandidateArcsByIP(solution.getArcs());
+                List<Arc> arcs = solution.getCandidateArcsByIP();
                 int randomIndex = random.nextInt(arcs.size());
                 Arc e = arcs.remove(randomIndex);
 
@@ -197,23 +193,6 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         return value / (sp1.getDistance() + arc.cost + sp2.getDistance());
     }
 
-    private double calcImprovePotential(Arc arc, Route route) {
-        int v1 = route.getPrev(arc).adjNode;
-        int v2 = route.getNext(arc).baseNode;
-
-        double score = 0;
-        double maxDist = 0;
-
-        double dist = getPathCost(v1, v2, arc);
-
-        for(Arc e : arc.getCas()) {
-            score += e.score - arc.score;
-            maxDist = Math.max(maxDist, getPathCost(v1, v2, e));
-        }
-
-        return score / (maxDist - dist);
-    }
-
     private List<Arc> getCandidateArcsByQR(List<Arc> cas) {
         List<Arc> arcs = new ArrayList<>();
         double avgQR = 0;
@@ -224,23 +203,6 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
         for(Arc ca : cas) {
             if(ca.qualityRatio >= avgQR) {
-                arcs.add(ca);
-            }
-        }
-
-        return arcs;
-    }
-
-    private List<Arc> getCandidateArcsByIP(List<Arc> solutionArcs) {
-        List<Arc> arcs = new ArrayList<>();
-        double avgIP = 0;
-        for(Arc ca : solutionArcs) {
-            avgIP += ca.improvePotential;
-        }
-        avgIP /= solutionArcs.size();
-
-        for(Arc ca : solutionArcs) {
-            if(ca.improvePotential >= avgIP) {
                 arcs.add(ca);
             }
         }
