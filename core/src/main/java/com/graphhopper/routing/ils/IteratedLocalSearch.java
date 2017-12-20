@@ -11,9 +11,12 @@ import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.weighting.BikePriorityWeighting;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
+import com.graphhopper.storage.NodeAccess;
 import com.graphhopper.util.EdgeIterator;
 import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.PMap;
+import com.graphhopper.util.shapes.GHPoint;
+import com.graphhopper.util.shapes.GHPoint3D;
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
 
@@ -32,6 +35,8 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     private PMap params;
     private Random random;
 
+    private NodeAccess nodeAccess;
+
     private boolean isFinished = false;
     private double maxCost;
     private int maxIterations;
@@ -44,6 +49,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         super(graph, weighting, TraversalMode.EDGE_BASED_1DIR);
 
         baseGraph = graph.getBaseGraph();
+        nodeAccess = graph.getNodeAccess();
         this.levelEdgeFilter = levelEdgeFilter;
         bikeEdgeFilter = new DefaultEdgeFilter(flagEncoder);
         bikePriorityWeighting = new BikePriorityWeighting(flagEncoder);
@@ -89,7 +95,8 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                         Arc prev = solution.getPrev(arc);
                         Arc next = solution.getNext(arc);
                         if(solution.contains(arc) || arc.equals(prev) || arc.equals(next)) {
-                            arc.setCas(computeCAS(null, prev.adjNode, next.baseNode, b2));
+                            // Using removed arc's CAS to compute next CAS (inherit)
+                            arc.setCas(computeCAS(e.getCas(), prev.adjNode, next.baseNode, b2));
                         } else {
                             // TODO budgets???
                             arc.setCas(updateCAS(arc, prev.adjNode, next.baseNode, b1, b2));
@@ -123,7 +130,24 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
             cas = getAllArcs();
         }
 
+        GHPoint focus1 = new GHPoint(nodeAccess.getLatitude(s), nodeAccess.getLongitude(s));
+        GHPoint focus2 = new GHPoint(nodeAccess.getLatitude(d), nodeAccess.getLongitude(d));
+        Ellipse ellipse = new Ellipse(focus1, focus2, cost);
+
         for(Arc arc : cas) {
+
+            boolean skip = false;
+            for(GHPoint3D ghPoint3D : arc.getPoints()) {
+                if(!ellipse.contains(ghPoint3D.lat, ghPoint3D.lon)) {
+                    skip = true;
+                    break ;
+                }
+            }
+
+            if(skip){
+                continue;
+            }
+
             if(arc.score > 0 && getPathCost(s, d, arc) <= cost) {
                 arc.qualityRatio = calcQualityRatio(s, d, arc);
                 result.add(arc);
@@ -152,7 +176,10 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
             double edgeScore = bikePriorityWeighting
                     .calcWeight(edgeIterator, false, baseNode);
 
-            arcs.add(new Arc(edge, baseNode, adjNode, edgeCost, edgeScore));
+            Arc arc = new Arc(edge, baseNode, adjNode, edgeCost, edgeScore);
+
+            arc.setPoints(edgeIterator.fetchWayGeometry(0));
+            arcs.add(arc);
         }
         return arcs;
     }

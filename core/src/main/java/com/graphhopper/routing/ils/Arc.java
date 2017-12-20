@@ -1,5 +1,7 @@
 package com.graphhopper.routing.ils;
 
+import com.graphhopper.util.PointList;
+
 import java.util.List;
 
 /**
@@ -13,6 +15,7 @@ final class Arc {
     final double cost, score;
     double improvePotential, qualityRatio;
     private List<Arc> cas;
+    private PointList points;
 
     Arc(int edgeId, int baseNode, int adjNode, double cost, double score) {
         this.edgeId = edgeId;
@@ -38,6 +41,14 @@ final class Arc {
 
     public void setCas(List<Arc> cas) {
         this.cas = cas;
+    }
+
+    public PointList getPoints() {
+        return points;
+    }
+
+    public void setPoints(PointList points) {
+        this.points = points;
     }
 
     @Override
