@@ -2,6 +2,7 @@ package com.graphhopper.routing.ils;
 
 import com.graphhopper.routing.AbstractRoutingAlgorithm;
 import com.graphhopper.routing.Path;
+import com.graphhopper.routing.QueryGraph;
 import com.graphhopper.routing.RoutingAlgorithm;
 import com.graphhopper.routing.ch.PrepareContractionHierarchies;
 import com.graphhopper.routing.util.DefaultEdgeFilter;
@@ -134,8 +135,9 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
     private List<Arc> getAllArcs() {
         List<Arc> arcs = new ArrayList<>();
-
-        EdgeIterator edgeIterator = baseGraph.getAllEdges();
+        // Super super hack to get getAllEdges() working
+        Graph gra = ((QueryGraph) baseGraph).getMainGraph();
+        EdgeIterator edgeIterator = gra.getAllEdges();
         while(edgeIterator.next()) {
 
             if(!bikeEdgeFilter.accept(edgeIterator)) {
