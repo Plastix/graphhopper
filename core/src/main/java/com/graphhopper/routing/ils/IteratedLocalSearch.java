@@ -12,11 +12,16 @@ import com.graphhopper.routing.weighting.BikePriorityWeighting;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.storage.NodeAccess;
-import com.graphhopper.util.EdgeIterator;
+import com.graphhopper.storage.RAMDirectory;
+import com.graphhopper.storage.index.LocationIndex;
+import com.graphhopper.storage.index.LocationIndexTree;
+import com.graphhopper.storage.index.QueryResult;
+import com.graphhopper.util.BreadthFirstSearch;
 import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.PMap;
 import com.graphhopper.util.shapes.GHPoint;
 import com.graphhopper.util.shapes.GHPoint3D;
+import com.graphhopper.util.shapes.Shape;
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
 
@@ -34,6 +39,9 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     private Graph baseGraph;
     private PMap params;
     private Random random;
+
+
+    private LocationIndex locationIndex;
 
     private NodeAccess nodeAccess;
 
@@ -55,6 +63,10 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         bikePriorityWeighting = new BikePriorityWeighting(flagEncoder);
         this.params = params;
         random = new Random();
+
+        // Uber hackyness
+        locationIndex = new LocationIndexTree(((QueryGraph) baseGraph).getMainGraph().getBaseGraph(), new RAMDirectory())
+                .prepareIndex();
 
         parseParams();
     }
@@ -124,15 +136,15 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     private List<Arc> computeCAS(@Nullable List<Arc> cas, int s, int d, double cost) {
         List<Arc> result = new ArrayList<>();
 
-        // If we don't have a CAS yet, use all edges from the graph as
-        // our current CAS
-        if(cas == null) {
-            cas = getAllArcs();
-        }
-
         GHPoint focus1 = new GHPoint(nodeAccess.getLatitude(s), nodeAccess.getLongitude(s));
         GHPoint focus2 = new GHPoint(nodeAccess.getLatitude(d), nodeAccess.getLongitude(d));
-        Ellipse ellipse = new Ellipse(focus1, focus2, cost);
+        Shape ellipse = new Ellipse(focus1, focus2, cost);
+
+        // If we don't have a CAS yet
+        if(cas == null) {
+            cas = getAllArcs(ellipse);
+        }
+
 
         for(Arc arc : cas) {
 
@@ -157,31 +169,57 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         return result;
     }
 
-    private List<Arc> getAllArcs() {
-        List<Arc> arcs = new ArrayList<>();
-        // Super super hack to get getAllEdges() working
-        Graph gra = ((QueryGraph) baseGraph).getMainGraph();
-        EdgeIterator edgeIterator = gra.getAllEdges();
-        while(edgeIterator.next()) {
+    private List<Arc> getAllArcs(final Shape shape) {
+        final List<Arc> arcs = new ArrayList<>();
 
-            if(!bikeEdgeFilter.accept(edgeIterator)) {
-                continue;
+        GHPoint center = shape.getCenter();
+        QueryResult qr = locationIndex.findClosest(center.getLat(), center.getLon(), bikeEdgeFilter);
+        // TODO: if there is no street close to the center it'll fail although there are roads covered. Maybe we should check edge points or some random points in the Shape instead?
+        if(!qr.isValid())
+            throw new IllegalArgumentException("Shape " + shape + " does not cover graph");
+
+        if(shape.contains(qr.getSnappedPoint().lat, qr.getSnappedPoint().lon)) {
+            addArc(arcs, qr.getClosestEdge());
+        }
+
+        BreadthFirstSearch bfs = new BreadthFirstSearch() {
+            final NodeAccess na = baseGraph.getNodeAccess();
+            final Shape localShape = shape;
+
+            @Override
+            protected boolean goFurther(int nodeId) {
+                return localShape.contains(na.getLatitude(nodeId), na.getLongitude(nodeId));
             }
 
-            int edge = edgeIterator.getEdge();
-            int baseNode = edgeIterator.getBaseNode();
-            int adjNode = edgeIterator.getAdjNode();
-            double edgeCost = edgeIterator.getDistance();
+            @Override
+            protected boolean checkAdjacent(EdgeIteratorState edge) {
+                if(localShape.contains(na.getLatitude(edge.getAdjNode()), na.getLongitude(edge.getAdjNode()))) {
+                    addArc(arcs, edge);
+                    return true;
+                }
+                return false;
+            }
+        };
 
-            double edgeScore = bikePriorityWeighting
-                    .calcWeight(edgeIterator, false, baseNode);
 
-            Arc arc = new Arc(edge, baseNode, adjNode, edgeCost, edgeScore);
+        bfs.start(baseGraph.createEdgeExplorer(bikeEdgeFilter), qr.getClosestNode());
 
-            arc.setPoints(edgeIterator.fetchWayGeometry(0));
-            arcs.add(arc);
-        }
         return arcs;
+    }
+
+    private void addArc(List<Arc> arcs, EdgeIteratorState edgeIterator) {
+        int edge = edgeIterator.getEdge();
+        int baseNode = edgeIterator.getBaseNode();
+        int adjNode = edgeIterator.getAdjNode();
+        double edgeCost = edgeIterator.getDistance();
+
+        double edgeScore = bikePriorityWeighting
+                .calcWeight(edgeIterator, false, baseNode);
+
+        Arc arc = new Arc(edge, baseNode, adjNode, edgeCost, edgeScore);
+
+        arc.setPoints(edgeIterator.fetchWayGeometry(0));
+        arcs.add(arc);
     }
 
     private List<Arc> updateCAS(@NotNull Arc arc, int v1, int v2, double newBudget,
