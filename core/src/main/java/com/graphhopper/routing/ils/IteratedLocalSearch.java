@@ -24,6 +24,8 @@ import com.graphhopper.util.shapes.GHPoint3D;
 import com.graphhopper.util.shapes.Shape;
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,13 +35,14 @@ import static com.graphhopper.util.Parameters.Routing.*;
 
 public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements ShortestPathCalculator {
 
+    private final Logger logger = LoggerFactory.getLogger(getClass());
+
     private EdgeFilter levelEdgeFilter; // Used for CH Dijkstra search
     private EdgeFilter bikeEdgeFilter;
     private Weighting bikePriorityWeighting;
     private Graph baseGraph;
     private PMap params;
     private Random random;
-
 
     private LocationIndex locationIndex;
 
@@ -89,7 +92,9 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         } else {
             solution = initialize(s, d);
 
+            logger.info("Running ILS...");
             for(int i = 0; i < maxIterations; i++) {
+                logger.info("Iteration " + i);
                 List<Arc> arcs = solution.getCandidateArcsByIP();
                 int randomIndex = random.nextInt(arcs.size());
                 Arc e = arcs.remove(randomIndex);
@@ -145,6 +150,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
             cas = getAllArcs(ellipse);
         }
 
+        logger.info("Starting to compute CAS! num arcs: " + cas.size() + " cost: " + cost);
 
         for(Arc arc : cas) {
 
@@ -152,11 +158,11 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
             for(GHPoint3D ghPoint3D : arc.getPoints()) {
                 if(!ellipse.contains(ghPoint3D.lat, ghPoint3D.lon)) {
                     skip = true;
-                    break ;
+                    break;
                 }
             }
 
-            if(skip){
+            if(skip) {
                 continue;
             }
 
@@ -166,10 +172,13 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
             }
         }
 
+        logger.info("Finished computing CAS! size: " + result.size());
+
         return result;
     }
 
     private List<Arc> getAllArcs(final Shape shape) {
+        logger.info("Fetching arcs from graph!");
         final List<Arc> arcs = new ArrayList<>();
 
         GHPoint center = shape.getCenter();
@@ -203,6 +212,8 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
 
         bfs.start(baseGraph.createEdgeExplorer(bikeEdgeFilter), qr.getClosestNode());
+
+        logger.info("Got all arcs inside of ellipse! num: " + arcs.size());
 
         return arcs;
     }
@@ -278,6 +289,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     }
 
     private Route generatePath(int s, int d, double dist, double minProfit, List<Arc> cas) {
+        logger.info("Generating path! dist: " + dist + " minProfit: " + minProfit + " cas size: " + cas.size());
         Arc init = new Arc(-1, s, d, 0, 0);
         Route route = Route.newRoute(this);
         route.addArc(0, init);
