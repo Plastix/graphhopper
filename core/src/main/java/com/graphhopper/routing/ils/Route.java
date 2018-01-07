@@ -36,7 +36,7 @@ final class Route {
             throw new IndexOutOfBoundsException();
         }
 
-        // Don't add any blank path segments for first aec added
+        // Don't add any blank path segments for first arc added
         if(length != 0) {
             if(index == 0) {
                 // Add arc to beginning of path: only requires inserting one blank path segment
@@ -85,7 +85,8 @@ final class Route {
         if(index != -1) {
             int length = getNumArcs();
 
-            if(length != 0) {
+            // We only need to remove blank path segments if we have more than one arc
+            if(length > 1) {
                 if(index == 0) {
                     // Remove head arc: remove one blank path segment
                     // 1-2-3 --> 2-3
@@ -266,21 +267,29 @@ final class Route {
         int index = -1;
         double min = Double.MAX_VALUE;
 
-        for(int i = 0; i < blankSegments.size(); i++) {
-            double value = blankSegments.get(i);
-            if(value < min) {
-                min = value;
-                index = i;
+        if(!isEmpty()) {
+
+            for(int i = 0; i < blankSegments.size(); i++) {
+                double value = blankSegments.get(i);
+                if(value < min) {
+                    min = value;
+                    index = i;
+                }
             }
+
+            int arcIndex = index + 1;
+            int start = arcs.get(arcIndex - 1).adjNode;
+            int end = arcs.get(arcIndex + 1).baseNode;
+
+            if(sp.getPathCost(start, end, arc) <=
+                    budget - getCost() + min) {
+                addArc(arcIndex, arc);
+            }
+
+        } else if(arc.cost < budget) {
+            addArc(0, arc);
         }
 
-        int arcIndex = index + 1;
-        int start = arcs.get(arcIndex - 1).adjNode;
-        int end = arcs.get(arcIndex + 1).baseNode;
 
-        if(sp.getPathCost(start, end, arc) <=
-                budget - getCost() + min) {
-            addArc(arcIndex, arc);
-        }
     }
 }
