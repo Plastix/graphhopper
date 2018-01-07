@@ -1,5 +1,7 @@
 package com.graphhopper.routing.ils;
 
+import com.graphhopper.coll.GHBitSet;
+import com.graphhopper.coll.GHBitSetImpl;
 import com.graphhopper.routing.AbstractRoutingAlgorithm;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.QueryGraph;
@@ -96,6 +98,8 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
             for(int i = 0; i < maxIterations; i++) {
                 logger.info("Iteration " + i);
                 List<Arc> arcs = solution.getCandidateArcsByIP();
+                logger.info("Candidate arcs: " + arcs.size());
+
                 int randomIndex = random.nextInt(arcs.size());
                 Arc e = arcs.remove(randomIndex);
 
@@ -104,6 +108,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                 Route path = generatePath(solution.getPrev(e).adjNode, solution.getNext(e).baseNode, b1, e.score, e.getCas());
 
                 if(!path.isEmpty()) {
+                    logger.info("Found path with with dist " + path.getCost());
                     int index = solution.removeArc(e);
                     solution.insertRoute(index, path);
                     for(Arc arc : solution.getArcs()) {
@@ -194,6 +199,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         BreadthFirstSearch bfs = new BreadthFirstSearch() {
             final NodeAccess na = baseGraph.getNodeAccess();
             final Shape localShape = shape;
+            final GHBitSet edgeIds = new GHBitSetImpl();
 
             @Override
             protected boolean goFurther(int nodeId) {
@@ -203,7 +209,11 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
             @Override
             protected boolean checkAdjacent(EdgeIteratorState edge) {
                 if(localShape.contains(na.getLatitude(edge.getAdjNode()), na.getLongitude(edge.getAdjNode()))) {
-                    addArc(arcs, edge);
+                    int edgeId = edge.getEdge();
+                    if(!edgeIds.contains(edgeId)) {
+                        addArc(arcs, edge);
+                        edgeIds.add(edgeId);
+                    }
                     return true;
                 }
                 return false;
