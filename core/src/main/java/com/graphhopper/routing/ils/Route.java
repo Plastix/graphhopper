@@ -267,7 +267,7 @@ final class Route {
         int index = -1;
         double min = Double.MAX_VALUE;
 
-        if(!isEmpty()) {
+        if(getNumArcs() > 1) {
 
             for(int i = 0; i < blankSegments.size(); i++) {
                 double value = blankSegments.get(i);
