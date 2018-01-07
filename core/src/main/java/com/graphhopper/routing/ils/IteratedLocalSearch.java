@@ -99,7 +99,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                 int randomIndex = random.nextInt(arcs.size());
                 Arc e = arcs.remove(randomIndex);
 
-                double b1 = solution.getCost() + e.cost; // Budget after removing e from solution
+                double b1 = (maxCost - solution.getCost()) + e.cost; // Remaining budget after removing e from solution
 
                 Route path = generatePath(solution.getPrev(e).adjNode, solution.getNext(e).baseNode, b1, e.score, e.getCas());
 
@@ -107,7 +107,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                     int index = solution.removeArc(e);
                     solution.insertRoute(index, path);
                     for(Arc arc : solution.getArcs()) {
-                        double b2 = solution.getCost() + arc.cost; // Budget after removing a from solution
+                        double b2 = (maxCost - solution.getCost()) + arc.cost; // Remaining budget after removing a from solution
 
                         Arc prev = solution.getPrev(arc);
                         Arc next = solution.getNext(arc);
@@ -298,7 +298,6 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         while(!arcs.isEmpty() && route.getCost() < dist) {
             int randomIndex = random.nextInt(arcs.size());
             Arc e = arcs.remove(randomIndex);
-            // TODO correct budget??
             route.insertArcAtSmallestFeasibleSegment(e, dist);
         }
 
