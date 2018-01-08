@@ -288,7 +288,7 @@ final class Route {
                 addArc(arcIndex, arc);
             }
 
-        } else if(arc.cost < budget) {
+        } else if(arc.cost < budget - getCost()) {
             // If we have 0 or 1 arcs we have no blank path segments to check
             addArc(0, arc);
         }
