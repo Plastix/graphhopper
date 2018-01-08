@@ -105,7 +105,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
                 double b1 = (maxCost - solution.getCost()) + e.cost; // Remaining budget after removing e from solution
 
-                Route path = generatePath(solution.getPrev(e).adjNode, solution.getNext(e).baseNode, b1, e.score, e.getCas());
+                Route path = generatePath(b1, e.score, e.getCas());
 
                 if(!path.isEmpty()) {
                     logger.info("Found path with with dist " + path.getCost());
@@ -298,11 +298,9 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         return arcs;
     }
 
-    private Route generatePath(int s, int d, double dist, double minProfit, List<Arc> cas) {
+    private Route generatePath(double dist, double minProfit, List<Arc> cas) {
         logger.info("Generating path! dist: " + dist + " minProfit: " + minProfit + " cas size: " + cas.size());
-//        Arc init = new Arc(-1, s, d, 0, 0);
         Route route = Route.newRoute(this);
-//        route.addArc(0, init);
 
         List<Arc> arcs = getCandidateArcsByQR(cas);
         while(!arcs.isEmpty() && route.getCost() < dist) {
@@ -319,11 +317,13 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
     }
 
+    @Override
     public double getPathCost(int s, int d, @NotNull Arc arc) {
         return shortestPath(s, arc.baseNode).getDistance() + arc.cost +
                 shortestPath(arc.adjNode, d).getDistance();
     }
 
+    @Override
     public Path shortestPath(int s, int d) {
         RoutingAlgorithm search =
                 new PrepareContractionHierarchies.DijkstraBidirectionCH(graph,
