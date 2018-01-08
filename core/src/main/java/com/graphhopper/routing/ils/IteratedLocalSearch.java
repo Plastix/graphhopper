@@ -98,7 +98,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
             for(int i = 0; i < maxIterations; i++) {
                 logger.info("Iteration " + i);
                 List<Arc> arcs = solution.getCandidateArcsByIP();
-                logger.info("Candidate arcs: " + arcs.size());
+                logger.info("Possible arcs to remove from solution: " + arcs.size());
 
                 int randomIndex = random.nextInt(arcs.size());
                 Arc e = arcs.remove(randomIndex);
