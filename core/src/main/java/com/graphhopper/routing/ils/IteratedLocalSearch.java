@@ -193,7 +193,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
             throw new IllegalArgumentException("Shape " + shape + " does not cover graph");
 
         if(shape.contains(qr.getSnappedPoint().lat, qr.getSnappedPoint().lon)) {
-            addArc(arcs, qr.getClosestEdge());
+            arcs.add(getArc(qr.getClosestEdge()));
         }
 
         BreadthFirstSearch bfs = new BreadthFirstSearch() {
@@ -211,7 +211,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                 if(localShape.contains(na.getLatitude(edge.getAdjNode()), na.getLongitude(edge.getAdjNode()))) {
                     int edgeId = edge.getEdge();
                     if(!edgeIds.contains(edgeId)) {
-                        addArc(arcs, edge);
+                        arcs.add(getArc(edge));
                         edgeIds.add(edgeId);
                     }
                     return true;
@@ -228,7 +228,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         return arcs;
     }
 
-    private void addArc(List<Arc> arcs, EdgeIteratorState edgeIterator) {
+    private Arc getArc(EdgeIteratorState edgeIterator) {
         int edge = edgeIterator.getEdge();
         int baseNode = edgeIterator.getBaseNode();
         int adjNode = edgeIterator.getAdjNode();
@@ -240,7 +240,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         Arc arc = new Arc(edge, baseNode, adjNode, edgeCost, edgeScore);
 
         arc.setPoints(edgeIterator.fetchWayGeometry(0));
-        arcs.add(arc);
+        return arc;
     }
 
     private List<Arc> updateCAS(@NotNull Arc arc, int v1, int v2, double newBudget,
