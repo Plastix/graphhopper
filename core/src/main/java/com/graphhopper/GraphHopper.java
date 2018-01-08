@@ -1090,6 +1090,7 @@ public class GraphHopper implements GraphHopperAPI {
             return altPaths;
 
         } catch (IllegalArgumentException ex) {
+            ex.printStackTrace(); // TODO (Aidan) temporary
             ghRsp.addError(ex);
             return Collections.emptyList();
         } finally {
