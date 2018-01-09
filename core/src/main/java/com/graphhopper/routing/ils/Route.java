@@ -259,6 +259,14 @@ final class Route {
         return (index != -1 && index + 1 <= getNumArcs() - 1) ? arcs.get(index + 1) : a;
     }
 
+    public Arc getArc(int index){
+        if(index >= 0 && index < getNumArcs()){
+            return arcs.get(index);
+        }
+
+        return null;
+    }
+
     public boolean contains(Arc a) {
         return arcs.contains(a);
     }
