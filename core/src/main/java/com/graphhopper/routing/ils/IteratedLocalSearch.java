@@ -114,14 +114,17 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                     for(Arc arc : solution.getArcs()) {
                         double b2 = (maxCost - solution.getCost()) + arc.cost; // Remaining budget after removing a from solution
 
-                        Arc prev = solution.getPrev(arc);
-                        Arc next = solution.getNext(arc);
-                        if(solution.contains(arc) || arc.equals(prev) || arc.equals(next)) {
+                        int startCAS = solution.getPrev(arc).adjNode;
+                        int endCAS = solution.getNext(arc).baseNode;
+
+                        Arc prev = solution.getArc(index);
+                        Arc next = solution.getArc(index + 1);
+
+                        if(path.contains(arc) || arc.equals(prev) || arc.equals(next)) {
                             // Using removed arc's CAS to compute next CAS (inherit)
-                            arc.setCas(computeCAS(e.getCas(), prev.adjNode, next.baseNode, b2));
+                            arc.setCas(computeCAS(e.getCas(), startCAS, endCAS, b2));
                         } else {
-                            // TODO budgets???
-                            arc.setCas(updateCAS(arc, prev.adjNode, next.baseNode, b1, b2));
+                            arc.setCas(updateCAS(arc, startCAS, endCAS, b1, b2));
                         }
                     }
                 }
