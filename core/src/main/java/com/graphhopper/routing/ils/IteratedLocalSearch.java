@@ -112,7 +112,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                     int index = solution.removeArc(e);
                     solution.insertRoute(index, path);
                     for(Arc arc : solution.getArcs()) {
-                        double b2 = (maxCost - solution.getCost()) + arc.cost; // Remaining budget after removing a from solution
+                        double b2 = (maxCost - solution.getCost()) + arc.cost; // Remaining budget after removing arc from solution
 
                         int startCAS = solution.getPrev(arc).adjNode;
                         int endCAS = solution.getNext(arc).baseNode;
