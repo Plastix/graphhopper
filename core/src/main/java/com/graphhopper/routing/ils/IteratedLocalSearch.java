@@ -37,6 +37,9 @@ import static com.graphhopper.util.Parameters.Routing.*;
 
 public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements ShortestPathCalculator {
 
+    private static final double MIN_ROAD_SCORE = 0.5;
+    private static final int MIN_ROAD_LENGTH = 1000;
+
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private EdgeFilter levelEdgeFilter; // Used for CH Dijkstra search
@@ -99,6 +102,11 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                 logger.info("Iteration " + i);
                 List<Arc> arcs = solution.getCandidateArcsByIP();
                 logger.info("Possible arcs to remove from solution: " + arcs.size());
+
+                // TODO (Aidan) Hacky fix. Figure out why we have zero candidate arcs??
+                if(arcs.size() == 0) {
+                    break;
+                }
 
                 int randomIndex = random.nextInt(arcs.size());
                 Arc e = arcs.remove(randomIndex);
@@ -174,7 +182,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                 continue;
             }
 
-            if(arc.score > 0 && getPathCost(s, d, arc) <= cost) {
+            if(arc.score > MIN_ROAD_SCORE && arc.cost > MIN_ROAD_LENGTH && getPathCost(s, d, arc) <= cost) {
                 arc.qualityRatio = calcQualityRatio(s, d, arc);
                 result.add(arc);
             }
