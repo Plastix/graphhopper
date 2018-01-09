@@ -3,6 +3,7 @@ package com.graphhopper.routing.ils;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
+import com.graphhopper.util.EdgeIteratorState;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -190,8 +191,32 @@ final class Route {
     public Path getPath(int s, int d, Graph graph, Weighting weighting) {
         Path path = new Path(graph, weighting);
 
-        for(Arc arc : arcs) {
+        Arc temp = null;
+        for(int i = 0; i < arcs.size(); i++) {
+
+            Arc arc = arcs.get(i);
+
+            if(i == 0 && arc.baseNode != s) {
+                for(EdgeIteratorState edge : sp.shortestPath(s, arc.baseNode).calcEdges()) {
+                    path.processEdge(edge.getEdge(), edge.getAdjNode(), edge.getEdge());
+                }
+            }
+
+            if(temp != null && temp.adjNode != arc.baseNode) {
+                for(EdgeIteratorState edge : sp.shortestPath(temp.adjNode, arc.baseNode).calcEdges()) {
+                    path.processEdge(edge.getEdge(), edge.getAdjNode(), edge.getEdge());
+                }
+            }
+
             path.processEdge(arc.edgeId, arc.adjNode, arc.edgeId);
+
+            if(i == arcs.size() - 1 && arc.adjNode != d) {
+                for(EdgeIteratorState edge : sp.shortestPath(arc.adjNode, d).calcEdges()) {
+                    path.processEdge(edge.getEdge(), edge.getAdjNode(), edge.getEdge());
+                }
+            }
+
+            temp = arc;
         }
 
         return path
