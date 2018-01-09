@@ -62,7 +62,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         super(graph, weighting, TraversalMode.EDGE_BASED_1DIR);
 
         baseGraph = graph.getBaseGraph();
-        nodeAccess = graph.getNodeAccess();
+        nodeAccess = baseGraph.getNodeAccess();
         this.levelEdgeFilter = levelEdgeFilter;
         bikeEdgeFilter = new DefaultEdgeFilter(flagEncoder);
         bikePriorityWeighting = new BikePriorityWeighting(flagEncoder);
@@ -200,18 +200,17 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         }
 
         BreadthFirstSearch bfs = new BreadthFirstSearch() {
-            final NodeAccess na = baseGraph.getNodeAccess();
             final Shape localShape = shape;
             final GHBitSet edgeIds = new GHBitSetImpl();
 
             @Override
             protected boolean goFurther(int nodeId) {
-                return localShape.contains(na.getLatitude(nodeId), na.getLongitude(nodeId));
+                return localShape.contains(nodeAccess.getLatitude(nodeId), nodeAccess.getLongitude(nodeId));
             }
 
             @Override
             protected boolean checkAdjacent(EdgeIteratorState edge) {
-                if(localShape.contains(na.getLatitude(edge.getAdjNode()), na.getLongitude(edge.getAdjNode()))) {
+                if(localShape.contains(nodeAccess.getLatitude(edge.getAdjNode()), nodeAccess.getLongitude(edge.getAdjNode()))) {
                     int edgeId = edge.getEdge();
                     if(!edgeIds.contains(edgeId)) {
                         arcs.add(getArc(edge));
