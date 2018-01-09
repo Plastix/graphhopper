@@ -259,8 +259,8 @@ final class Route {
         return (index != -1 && index + 1 <= getNumArcs() - 1) ? arcs.get(index + 1) : a;
     }
 
-    public Arc getArc(int index){
-        if(index >= 0 && index < getNumArcs()){
+    public Arc getArc(int index) {
+        if(index >= 0 && index < getNumArcs()) {
             return arcs.get(index);
         }
 
@@ -277,7 +277,6 @@ final class Route {
 
         if(getNumArcs() > 1) {
             // We have at least 2 arcs and at least 1 blank path segment
-
             // Find smallest blank path segment
             for(int i = 0; i < blankSegments.size(); i++) {
                 double value = blankSegments.get(i);
@@ -288,16 +287,20 @@ final class Route {
             }
 
             int arcIndex = pathIndex + 1;
-            int start = (arcIndex - 1 > 0) ? arcs.get(arcIndex - 1).adjNode : arcs.get(arcIndex).baseNode;
-            int end = (arcIndex + 1 < arcs.size()) ? arcs.get(arcIndex + 1).baseNode : arcs.get(arcIndex).adjNode;
+            int start = (arcIndex - 1 >= 0) ? arcs.get(arcIndex - 1).adjNode : arcs.get(arcIndex).adjNode;
+            int end = arcs.get(arcIndex).baseNode;
 
             if(sp.getPathCost(start, end, arc) <=
                     budget - getCost() + minPathValue) {
                 addArc(arcIndex, arc);
             }
 
-        } else if(arc.cost < budget - getCost()) {
             // If we have 0 or 1 arcs we have no blank path segments to check
+        } else if(getNumArcs() == 1) {
+            if(arc.cost + sp.shortestPath(arc.adjNode, arcs.get(0).baseNode).getDistance() <= budget - getCost()) {
+                addArc(0, arc);
+            }
+        } else if(arc.cost <= budget - getCost()) {
             addArc(0, arc);
         }
 
