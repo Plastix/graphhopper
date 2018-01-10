@@ -93,7 +93,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     private Path runILS(int s, int d) {
         Route solution;
         if(shortestPath(s, d).getDistance() > maxCost) {
-            solution = Route.newRoute(this);
+            solution = Route.newRoute(this, s, d);
         } else {
             solution = initialize(s, d);
 
@@ -113,7 +113,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
                 double b1 = (maxCost - solution.getCost()) + e.cost; // Remaining budget after removing e from solution
 
-                Route path = generatePath(b1, e.score, e.getCas());
+                Route path = generatePath(solution.getPrev(e).adjNode, solution.getNext(e).baseNode, b1, e.score, e.getCas());
 
                 if(!path.isEmpty()) {
                     logger.info("Found path with with dist " + path.getCost());
@@ -145,7 +145,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     }
 
     private Route initialize(int s, int d) {
-        Route route = Route.newRoute(this);
+        Route route = Route.newRoute(this, s, d);
         // Add fake edge to start solution
         Arc arc = new Arc(-1, s, d, maxCost, 0);
         arc.setCas(computeCAS(null, s, d, maxCost));
@@ -307,9 +307,9 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         return arcs;
     }
 
-    private Route generatePath(double dist, double minProfit, List<Arc> cas) {
+    private Route generatePath(int s, int d, double dist, double minProfit, List<Arc> cas) {
         logger.info("Generating path! dist: " + dist + " minProfit: " + minProfit + " cas size: " + cas.size());
-        Route route = Route.newRoute(this);
+        Route route = Route.newRoute(this, s, d);
 
         List<Arc> arcs = getCandidateArcsByQR(cas);
         while(!arcs.isEmpty() && route.getCost() < dist) {
@@ -321,7 +321,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         if(route.getScore() > minProfit) {
             return route;
         } else {
-            return Route.newRoute(this);
+            return Route.newRoute(this, s, d);
         }
 
     }
