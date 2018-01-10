@@ -355,8 +355,9 @@ final class Route {
     public void insertArcAtMinPathSegment(Arc arc, double budget) {
         int pathIndex = -1;
         double minPathValue = Double.MAX_VALUE;
+        int numArcs = getNumArcs();
 
-        if(getNumArcs() > 1) {
+        if(numArcs > 1) {
             // We have at least 2 arcs and at least 1 blank path segment
             // Find smallest blank path segment
             for(int i = 0; i < blankSegments.size(); i++) {
@@ -377,11 +378,11 @@ final class Route {
             }
 
             // If we have 0 or 1 arcs we have no blank path segments to check
-        } else if(getNumArcs() == 1) {
-            if(arc.cost + sp.shortestPath(arc.adjNode, arcs.get(0).baseNode).getDistance() <= budget - getCost()) {
+        } else if(numArcs == 1) {
+            if(sp.getPathCost(s, arcs.get(0).baseNode, arc) <= budget - getCost() + startSegment) {
                 addArc(0, arc);
             }
-        } else if(arc.cost <= budget - getCost()) {
+        } else if(sp.getPathCost(s, d, arc) <= budget) {
             addArc(0, arc);
         }
 
