@@ -168,21 +168,20 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
         logger.info("Starting to compute CAS! num arcs: " + cas.size() + " cost: " + cost);
 
+        outer:
         for(Arc arc : cas) {
 
-            boolean skip = false;
-            for(GHPoint3D ghPoint3D : arc.getPoints()) {
-                if(!ellipse.contains(ghPoint3D.lat, ghPoint3D.lon)) {
-                    skip = true;
-                    break;
-                }
-            }
-
-            if(skip) {
+            if(arc.score < MIN_ROAD_SCORE || arc.cost < MIN_ROAD_LENGTH) {
                 continue;
             }
 
-            if(arc.score > MIN_ROAD_SCORE && arc.cost > MIN_ROAD_LENGTH && getPathCost(s, d, arc) <= cost) {
+            for(GHPoint3D ghPoint3D : arc.getPoints()) {
+                if(!ellipse.contains(ghPoint3D.lat, ghPoint3D.lon)) {
+                    continue outer;
+                }
+            }
+
+            if(getPathCost(s, d, arc) <= cost) {
                 arc.qualityRatio = calcQualityRatio(s, d, arc);
                 result.add(arc);
             }
