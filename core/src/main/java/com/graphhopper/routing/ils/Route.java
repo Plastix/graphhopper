@@ -4,6 +4,8 @@ import com.graphhopper.routing.Path;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.util.EdgeIteratorState;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,21 +16,30 @@ import java.util.List;
  */
 final class Route {
 
+    private final Logger logger = LoggerFactory.getLogger(getClass());
+
     private ShortestPathCalculator sp;
+    private int s, d;
     private List<Arc> arcs;
     private List<Double> blankSegments;
+    private double startSegment, endSegment;
     private double cost, score;
 
-    private Route(ShortestPathCalculator shortestPathCalculator) {
+
+    private Route(ShortestPathCalculator shortestPathCalculator, int s, int d) {
         sp = shortestPathCalculator;
         arcs = new ArrayList<>();
         blankSegments = new ArrayList<>();
         cost = 0;
         score = 0;
+        this.s = s;
+        this.d = d;
+        startSegment = 0;
+        endSegment = 0;
     }
 
-    public static Route newRoute(ShortestPathCalculator shortestPathCalculator) {
-        return new Route(shortestPathCalculator);
+    public static Route newRoute(ShortestPathCalculator sp, int s, int d) {
+        return new Route(sp, s, d);
     }
 
     void addArc(int index, Arc arc) {
@@ -78,13 +89,39 @@ final class Route {
         arcs.add(index, arc);
         cost += arc.cost;
         score += arc.score;
+
+
+        if(index == 0) {
+            // Edge case
+            // If our arc's starting node is not our start of route we need to add another path segment
+            cost -= startSegment;
+            if(arc.baseNode != s) {
+                startSegment = sp.shortestPath(s, arc.baseNode).getDistance();
+            } else {
+                startSegment = 0;
+            }
+            cost += startSegment;
+        }
+
+        if(index == length) {
+            // Edge case
+            // If our arc's ending node is not our end of route we need to add another path segment
+            cost -= endSegment;
+            if(arc.adjNode != d) {
+                endSegment = sp.shortestPath(arc.adjNode, d).getDistance();
+            } else {
+                endSegment = 0;
+            }
+            cost += endSegment;
+
+        }
     }
 
     public int removeArc(Arc a) {
         int index = arcs.indexOf(a);
+        int length = getNumArcs();
 
         if(index != -1) {
-            int length = getNumArcs();
 
             // We only need to remove blank path segments if we have more than one arc
             if(length > 1) {
@@ -118,6 +155,26 @@ final class Route {
                 }
             }
 
+            if(index == 0) {
+                cost -= startSegment;
+                if(length > 1) {
+                    startSegment = sp.shortestPath(s, arcs.get(1).baseNode).getDistance();
+                } else {
+                    startSegment = 0;
+                }
+                cost += startSegment;
+            }
+
+            if(index == length - 1) {
+                cost -= endSegment;
+                if(length > 1) {
+                    endSegment = sp.shortestPath(arcs.get(length - 2).adjNode, d).getDistance();
+                } else {
+                    endSegment = 0;
+                }
+                cost += endSegment;
+            }
+
             arcs.remove(index);
             cost -= a.cost;
             score -= a.score;
@@ -131,6 +188,9 @@ final class Route {
         if(index < 0 || index > length) {
             throw new IndexOutOfBoundsException();
         }
+
+        route.cost -= route.startSegment;
+        route.cost -= route.endSegment;
 
         if(length != 0 && !route.isEmpty()) {
             if(index == 0) {
@@ -178,6 +238,35 @@ final class Route {
         arcs.addAll(index, route.arcs);
         blankSegments.addAll(index, route.blankSegments);
 
+
+        if(!route.isEmpty()) {
+            if(index == 0) {
+                // Edge case
+                // If our arc's starting node is not our start of route we need to add another path segment
+                Arc first = route.arcs.get(0);
+                cost -= startSegment;
+                if(first.baseNode != s) {
+                    startSegment = sp.shortestPath(s, first.baseNode).getDistance();
+                } else {
+                    startSegment = 0;
+                }
+                cost += startSegment;
+            }
+
+            if(index == length) {
+                // Edge case
+                // If our arc's ending node is not our end of route we need to add another path segment
+                Arc last = route.arcs.get(route.getNumArcs() - 1);
+                cost -= endSegment;
+                if(last.adjNode != d) {
+                    endSegment = sp.shortestPath(last.adjNode, d).getDistance();
+                } else {
+                    endSegment = 0;
+                }
+                cost += endSegment;
+            }
+        }
+
     }
 
     public double getCost() {
@@ -189,6 +278,7 @@ final class Route {
     }
 
     public Path getPath(int s, int d, Graph graph, Weighting weighting) {
+        logger.info("Route cost: " + getCost());
         Path path = new Path(graph, weighting);
 
         Arc temp = null;
