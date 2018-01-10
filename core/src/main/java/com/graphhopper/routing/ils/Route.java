@@ -322,7 +322,10 @@ final class Route {
             maxDist = Math.max(maxDist, sp.getPathCost(v1, v2, e));
         }
 
-        return score / (maxDist - dist);
+        double result = score / (maxDist - dist);
+
+        // Hacky fix for NaN values
+        return Double.isNaN(result) ? 0 : result;
     }
 
     public Arc getPrev(Arc a) {

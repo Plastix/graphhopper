@@ -103,11 +103,6 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                 List<Arc> arcs = solution.getCandidateArcsByIP();
                 logger.info("Possible arcs to remove from solution: " + arcs.size());
 
-                // TODO (Aidan) Hacky fix. Figure out why we have zero candidate arcs??
-                if(arcs.size() == 0) {
-                    break;
-                }
-
                 int randomIndex = random.nextInt(arcs.size());
                 Arc e = arcs.remove(randomIndex);
 
