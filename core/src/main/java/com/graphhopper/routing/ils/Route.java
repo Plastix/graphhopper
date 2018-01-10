@@ -368,8 +368,8 @@ final class Route {
                 }
             }
 
-            int arcIndex = pathIndex + 1;
-            int start = (arcIndex - 1 >= 0) ? arcs.get(arcIndex - 1).adjNode : arcs.get(arcIndex).adjNode;
+            int arcIndex = pathIndex + 1; // >= 1
+            int start = arcs.get(arcIndex - 1).adjNode;
             int end = arcs.get(arcIndex).baseNode;
 
             if(sp.getPathCost(start, end, arc) <=
