@@ -82,7 +82,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     private Path runILS(int s, int d) {
         Route solution;
         if(shortestPath(s, d).getDistance() > MAX_COST) {
-            solution = Route.newRoute(this, s, d);
+            solution = Route.newRoute(this, s, d, baseGraph, weighting);
         } else {
             solution = initialize(s, d);
 
@@ -125,11 +125,11 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
         isFinished = true;
 
-        return solution.getPath(s, d, baseGraph, weighting);
+        return solution.getPath();
     }
 
     private Route initialize(int s, int d) {
-        Route route = Route.newRoute(this, s, d);
+        Route route = Route.newRoute(this, s, d, baseGraph, weighting);
         // Add fake edge to start solution
         Arc arc = new Arc(-1, s, d, MAX_COST, 0);
         arc.setCas(computeCAS(null, s, d, MAX_COST));
@@ -293,7 +293,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
     private Route generatePath(int s, int d, double dist, double minProfit, List<Arc> cas) {
         logger.debug("Generating path! dist: " + dist + " minProfit: " + minProfit + " cas size: " + cas.size());
-        Route route = Route.newRoute(this, s, d);
+        Route route = Route.newRoute(this, s, d, baseGraph, weighting);
 
         List<Arc> arcs = getCandidateArcsByQR(cas);
         while(!arcs.isEmpty() && route.getCost() < dist) {
@@ -305,7 +305,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         if(route.getScore() > minProfit) {
             return route;
         } else {
-            return Route.newRoute(this, s, d);
+            return Route.newRoute(this, s, d, baseGraph, weighting);
         }
 
     }

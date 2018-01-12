@@ -17,15 +17,19 @@ import java.util.List;
 final class Route {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final Path EMPTY_PATH;
 
+    private Graph graph;
+    private Weighting weighting;
     private ShortestPathCalculator sp;
+
     private int s, d;
     private List<Arc> arcs;
-    private List<Double> blankSegments;
-    private double startSegment, endSegment;
+    private List<Path> blankSegments;
+    private Path startSegment, endSegment;
     private double cost, score;
 
-    private Route(ShortestPathCalculator shortestPathCalculator, int s, int d) {
+    private Route(ShortestPathCalculator shortestPathCalculator, int s, int d, Graph graph, Weighting weighting) {
         sp = shortestPathCalculator;
         arcs = new ArrayList<>();
         blankSegments = new ArrayList<>();
@@ -33,12 +37,15 @@ final class Route {
         score = 0;
         this.s = s;
         this.d = d;
-        startSegment = 0;
-        endSegment = 0;
+        this.graph = graph;
+        this.weighting = weighting;
+        EMPTY_PATH = new Path(graph, weighting);
+        startSegment = EMPTY_PATH;
+        endSegment = EMPTY_PATH;
     }
 
-    public static Route newRoute(ShortestPathCalculator sp, int s, int d) {
-        return new Route(sp, s, d);
+    public static Route newRoute(ShortestPathCalculator sp, int s, int d, Graph graph, Weighting weighting) {
+        return new Route(sp, s, d, graph, weighting);
     }
 
     void addArc(int index, Arc arc) {
@@ -46,7 +53,6 @@ final class Route {
         if(index < 0 || index > length) {
             throw new IndexOutOfBoundsException();
         }
-
         if(index == 0) {
             addLeadingPathSegment(arc);
             updateStartPathSegment(arc);
@@ -76,15 +82,15 @@ final class Route {
                 if(index == 0) {
                     // Remove head arc: remove one blank path segment
                     // 1-2-3 --> 2-3
-                    double segment = blankSegments.remove(index);
-                    cost -= segment;
+                    Path segment = blankSegments.remove(index);
+                    cost -= segment.getDistance();
                 } else if(index == length - 1) {
                     // Remove tail arc: remove one blank path segment
                     // 1-2-3 --> 1-2
                     //
                     // For n arcs there are n-1 blank path segments
-                    double segment = blankSegments.remove(index - 1);
-                    cost -= segment;
+                    Path segment = blankSegments.remove(index - 1);
+                    cost -= segment.getDistance();
 
                 } else {
                     // Remove middle arc: remove two blank path segments and add a new one
@@ -92,15 +98,15 @@ final class Route {
                     Arc prevArc = arcs.get(index - 1);
                     Arc nextArc = arcs.get(index + 1);
 
-                    double cost1 = blankSegments.remove(index - 1);
-                    double cost2 = blankSegments.remove(index - 1);
+                    Path segment1 = blankSegments.remove(index - 1);
+                    Path segment2 = blankSegments.remove(index - 1);
 
-                    cost -= cost1;
-                    cost -= cost2;
+                    cost -= segment1.getDistance();
+                    cost -= segment2.getDistance();
 
-                    double segment = sp.shortestPath(prevArc.adjNode, nextArc.baseNode).getDistance();
+                    Path segment = sp.shortestPath(prevArc.adjNode, nextArc.baseNode);
                     blankSegments.add(index - 1, segment);
-                    cost += segment;
+                    cost += segment.getDistance();
                 }
             }
 
@@ -148,8 +154,8 @@ final class Route {
 
             // We need to remove the inserted routes starting and ending path cost
             // We recalculate the new path segments below
-            route.cost -= route.startSegment;
-            route.cost -= route.endSegment;
+            route.cost -= route.startSegment.getDistance();
+            route.cost -= route.endSegment.getDistance();
 
             score += route.score;
             cost += route.cost;
@@ -162,9 +168,9 @@ final class Route {
         if(!isEmpty()) {
             // Add arc to beginning of path: only requires inserting one blank path segment
             // 1-2-3 --> 0-1-2-3
-            double distance = sp.shortestPath(arc.adjNode, arcs.get(0).baseNode).getDistance();
-            blankSegments.add(0, distance);
-            cost += distance;
+            Path segment = sp.shortestPath(arc.adjNode, arcs.get(0).baseNode);
+            blankSegments.add(0, segment);
+            cost += segment.getDistance();
         }
     }
 
@@ -172,9 +178,9 @@ final class Route {
         if(!isEmpty()) {
             // Add arc to end of path: only requires inserting one blank path segment
             // 1-2-3 --> 1-2-3-4
-            double distance = sp.shortestPath(arcs.get(getNumArcs() - 1).adjNode, arc.baseNode).getDistance();
-            blankSegments.add(distance);
-            cost += distance;
+            Path segment = sp.shortestPath(arcs.get(getNumArcs() - 1).adjNode, arc.baseNode);
+            blankSegments.add(segment);
+            cost += segment.getDistance();
         }
     }
 
@@ -192,13 +198,13 @@ final class Route {
             Arc prevArc = arcs.get(index - 1);
             Arc nextArc = arcs.get(index);
 
-            double segment1 = sp.shortestPath(prevArc.adjNode, left.baseNode).getDistance();
-            cost += segment1;
-            double segment2 = sp.shortestPath(right.adjNode, nextArc.baseNode).getDistance();
-            cost += segment2;
+            Path segment1 = sp.shortestPath(prevArc.adjNode, left.baseNode);
+            cost += segment1.getDistance();
+            Path segment2 = sp.shortestPath(right.adjNode, nextArc.baseNode);
+            cost += segment2.getDistance();
 
-            double removed = blankSegments.remove(index - 1);
-            cost -= removed;
+            Path removed = blankSegments.remove(index - 1);
+            cost -= removed.getDistance();
 
             blankSegments.add(index - 1, segment2);
             blankSegments.add(index - 1, segment1);
@@ -208,25 +214,25 @@ final class Route {
     private void updateStartPathSegment(Arc arc) {
         // Edge case
         // If our arc's starting node is not our start of route we need to add another path segment
-        cost -= startSegment;
+        cost -= startSegment.getDistance();
         if(arc != null && arc.baseNode != s) {
-            startSegment = sp.shortestPath(s, arc.baseNode).getDistance();
+            startSegment = sp.shortestPath(s, arc.baseNode);
         } else {
-            startSegment = 0;
+            startSegment = EMPTY_PATH;
         }
-        cost += startSegment;
+        cost += startSegment.getDistance();
     }
 
     private void updateEndPathSegment(Arc arc) {
         // Edge case
         // If our arc's ending node is not our end of route we need to add another path segment
-        cost -= endSegment;
+        cost -= endSegment.getDistance();
         if(arc != null && arc.adjNode != d) {
-            endSegment = sp.shortestPath(arc.adjNode, d).getDistance();
+            endSegment = sp.shortestPath(arc.adjNode, d);
         } else {
-            endSegment = 0;
+            endSegment = EMPTY_PATH;
         }
-        cost += endSegment;
+        cost += endSegment.getDistance();
     }
 
     public double getCost() {
@@ -237,39 +243,27 @@ final class Route {
         return score;
     }
 
-    public Path getPath(int s, int d, Graph graph, Weighting weighting) {
+    public Path getPath() {
         logger.debug("Route cost: " + getCost());
         Path path = new Path(graph, weighting);
 
-        Arc temp = null;
+        for(EdgeIteratorState edge : startSegment.calcEdges()) {
+            path.processEdge(edge.getEdge(), edge.getAdjNode(), edge.getEdge());
+        }
+
         for(int i = 0; i < arcs.size(); i++) {
-
             Arc arc = arcs.get(i);
-
-            // Add leading gap edges (s --> a_0)
-            if(i == 0 && arc.baseNode != s) {
-                for(EdgeIteratorState edge : sp.shortestPath(s, arc.baseNode).calcEdges()) {
-                    path.processEdge(edge.getEdge(), edge.getAdjNode(), edge.getEdge());
-                }
-            }
-
-            // Fill in gap between two arcs (a_i --> a_i+1)
-            if(temp != null && temp.adjNode != arc.baseNode) {
-                for(EdgeIteratorState edge : sp.shortestPath(temp.adjNode, arc.baseNode).calcEdges()) {
-                    path.processEdge(edge.getEdge(), edge.getAdjNode(), edge.getEdge());
-                }
-            }
-
             path.processEdge(arc.edgeId, arc.adjNode, arc.edgeId);
 
-            // Add trailing gap edges (a_n --> d)
-            if(i == arcs.size() - 1 && arc.adjNode != d) {
-                for(EdgeIteratorState edge : sp.shortestPath(arc.adjNode, d).calcEdges()) {
+            if(i < arcs.size() - 1) {
+                for(EdgeIteratorState edge : blankSegments.get(i).calcEdges()) {
                     path.processEdge(edge.getEdge(), edge.getAdjNode(), edge.getEdge());
                 }
             }
+        }
 
-            temp = arc;
+        for(EdgeIteratorState edge : endSegment.calcEdges()) {
+            path.processEdge(edge.getEdge(), edge.getAdjNode(), edge.getEdge());
         }
 
         return path
@@ -361,7 +355,7 @@ final class Route {
             // We have at least 2 arcs and at least 1 blank path segment
             // Find smallest blank path segment
             for(int i = 0; i < blankSegments.size(); i++) {
-                double value = blankSegments.get(i);
+                double value = blankSegments.get(i).getDistance();
                 if(value < minPathValue) {
                     minPathValue = value;
                     pathIndex = i;
@@ -379,7 +373,7 @@ final class Route {
 
             // If we have 0 or 1 arcs we have no blank path segments to check
         } else if(numArcs == 1) {
-            if(sp.getPathCost(s, arcs.get(0).baseNode, arc) <= budget - getCost() + startSegment) {
+            if(sp.getPathCost(s, arcs.get(0).baseNode, arc) <= budget - getCost() + startSegment.getDistance()) {
                 addArc(0, arc);
             }
         } else if(sp.getPathCost(s, d, arc) <= budget) {
