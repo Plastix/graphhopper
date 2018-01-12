@@ -1,14 +1,14 @@
 /*
  *  Licensed to GraphHopper GmbH under one or more contributor
- *  license agreements. See the NOTICE file distributed with this work for 
+ *  license agreements. See the NOTICE file distributed with this work for
  *  additional information regarding copyright ownership.
- * 
- *  GraphHopper GmbH licenses this file to you under the Apache License, 
- *  Version 2.0 (the "License"); you may not use this file except in 
+ *
+ *  GraphHopper GmbH licenses this file to you under the Apache License,
+ *  Version 2.0 (the "License"); you may not use this file except in
  *  compliance with the License. You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -84,10 +84,10 @@ public class GraphHopperServlet extends GHBaseServlet {
         String algoStr = getParam(httpReq, "algorithm", "");
         String localeStr = getParam(httpReq, "locale", "en");
 
-        // Only used for bike route ILS algorithm
+        // TODO (Aidan) Only used for bike route ILS algorithm
         double maxDist = getDoubleParam(httpReq, MAX_DIST, DEFAULT_MAX_DIST);
-        double minDist = getDoubleParam(httpReq, MIN_DIST, DEFAULT_MIN_DIST);
-        int maxDepth = getIntParam(httpReq, SEARCH_DEPTH, DEFAULT_SEARCH_DEPTH);
+        double minRoadScore = getDoubleParam(httpReq, MIN_ROAD_SCORE, DEFAULT_MIN_ROAD_SCORE);
+        int minRoadLength = getIntParam(httpReq, MIN_ROAD_LENGTH, DEFAULT_MIN_ROAD_LENGTH);
         int iterations = getIntParam(httpReq, MAX_ITERATIONS, DEFAULT_MAX_ITERATIONS);
 
         StopWatch sw = new StopWatch().start();
@@ -149,8 +149,8 @@ public class GraphHopperServlet extends GHBaseServlet {
                         put(INSTRUCTIONS, enableInstructions).
                         put(WAY_POINT_MAX_DISTANCE, minPathPrecision).
                         put(MAX_DIST, maxDist).
-                        put(MIN_DIST, minDist).
-                        put(SEARCH_DEPTH, maxDepth)
+                        put(MIN_ROAD_SCORE, minRoadScore).
+                        put(MIN_ROAD_LENGTH, minRoadLength)
                         .put(MAX_ITERATIONS, iterations);
 
                 ghRsp = graphHopper.route(request);
