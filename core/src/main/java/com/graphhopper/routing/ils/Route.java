@@ -238,6 +238,10 @@ final class Route {
         logger.debug("Route cost: " + getCost());
         Path path = new Path(graph, weighting);
 
+        if(arcIds.contains(Arc.FAKE_ARC_ID)) {
+            return path.setFound(false);
+        }
+
         for(int i = 0; i < blankSegments.size(); i++) {
             Path blank = blankSegments.get(i);
             for(EdgeIteratorState edge : blank.calcEdges()) {
