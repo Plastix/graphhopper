@@ -1,5 +1,6 @@
 package com.graphhopper.routing.ils;
 
+import com.carrotsearch.hppc.IntHashSet;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
@@ -22,11 +23,12 @@ final class Route {
     private Graph graph;
     private Weighting weighting;
     private ShortestPathCalculator sp;
+    private final int s, d;
 
-    private int s, d;
     private List<Arc> arcs;
     private List<Path> blankSegments;
     private Path startSegment, endSegment;
+    private IntHashSet arcIds;
     private double cost, score;
 
     private Route(ShortestPathCalculator shortestPathCalculator, int s, int d, Graph graph, Weighting weighting) {
@@ -39,6 +41,7 @@ final class Route {
         this.d = d;
         this.graph = graph;
         this.weighting = weighting;
+        arcIds = new IntHashSet();
         EMPTY_PATH = new Path(graph, weighting);
         startSegment = EMPTY_PATH;
         endSegment = EMPTY_PATH;
@@ -70,6 +73,7 @@ final class Route {
         arcs.add(index, arc);
         cost += arc.cost;
         score += arc.score;
+        arcIds.add(arc.edgeId);
     }
 
     public int removeArc(Arc a) {
@@ -123,6 +127,7 @@ final class Route {
             arcs.remove(index);
             cost -= a.cost;
             score -= a.score;
+            arcIds.remove(a.edgeId);
         }
 
         return index;
@@ -161,6 +166,7 @@ final class Route {
             cost += route.cost;
             arcs.addAll(index, route.arcs);
             blankSegments.addAll(index, route.blankSegments);
+            arcIds.addAll(route.arcIds);
         }
     }
 
@@ -343,7 +349,7 @@ final class Route {
     }
 
     public boolean contains(Arc a) {
-        return arcs.contains(a);
+        return arcIds.contains(a.edgeId);
     }
 
     public void insertArcAtMinPathSegment(Arc arc, double budget) {
@@ -379,7 +385,5 @@ final class Route {
         } else if(sp.getPathCost(s, d, arc) <= budget) {
             addArc(0, arc);
         }
-
-
     }
 }
