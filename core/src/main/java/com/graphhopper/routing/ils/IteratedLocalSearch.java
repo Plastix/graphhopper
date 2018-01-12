@@ -1,10 +1,8 @@
 package com.graphhopper.routing.ils;
 
-import com.graphhopper.coll.GHBitSet;
-import com.graphhopper.coll.GHBitSetImpl;
+import com.carrotsearch.hppc.IntHashSet;
 import com.graphhopper.routing.AbstractRoutingAlgorithm;
 import com.graphhopper.routing.Path;
-import com.graphhopper.routing.QueryGraph;
 import com.graphhopper.routing.RoutingAlgorithm;
 import com.graphhopper.routing.ch.PrepareContractionHierarchies;
 import com.graphhopper.routing.util.DefaultEdgeFilter;
@@ -13,10 +11,7 @@ import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.weighting.BikePriorityWeighting;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
-import com.graphhopper.storage.NodeAccess;
-import com.graphhopper.storage.RAMDirectory;
 import com.graphhopper.storage.index.LocationIndex;
-import com.graphhopper.storage.index.LocationIndexTree;
 import com.graphhopper.storage.index.QueryResult;
 import com.graphhopper.util.BreadthFirstSearch;
 import com.graphhopper.util.EdgeIteratorState;
@@ -49,7 +44,6 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
     private Graph baseGraph;
     private LocationIndex locationIndex;
-    private NodeAccess nodeAccess;
     private EdgeFilter levelEdgeFilter; // Used for CH Dijkstra search
     private EdgeFilter bikeEdgeFilter;
     private Weighting bikePriorityWeighting;
@@ -65,11 +59,10 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         super(graph, weighting, TraversalMode.EDGE_BASED_1DIR);
 
         baseGraph = graph.getBaseGraph();
-        nodeAccess = baseGraph.getNodeAccess();
         this.levelEdgeFilter = levelEdgeFilter;
+        this.locationIndex = locationIndex;
         bikeEdgeFilter = new DefaultEdgeFilter(flagEncoder);
         bikePriorityWeighting = new BikePriorityWeighting(flagEncoder);
-        this.locationIndex = locationIndex;
 
         MAX_COST = params.getDouble(MAX_DIST, DEFAULT_MAX_DIST);
         MAX_ITERATIONS = params.getInt(Parameters.Routing.MAX_ITERATIONS, DEFAULT_MAX_ITERATIONS);
@@ -199,7 +192,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
         BreadthFirstSearch bfs = new BreadthFirstSearch() {
             final Shape localShape = shape;
-            final GHBitSet edgeIds = new GHBitSetImpl();
+            final IntHashSet edgeIds = new IntHashSet();
 
             @Override
             protected boolean goFurther(int nodeId) {
