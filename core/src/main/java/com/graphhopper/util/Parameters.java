@@ -137,6 +137,7 @@ public class Parameters {
         public static final double DEFAULT_MIN_ROAD_SCORE = 0.5;
         public static final String MIN_ROAD_LENGTH = "min_road_length";
         public static final int DEFAULT_MIN_ROAD_LENGTH = 1000; // in meters
+        public static final String SEED = "seed";
     }
 
     /**

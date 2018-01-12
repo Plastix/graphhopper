@@ -89,6 +89,7 @@ public class GraphHopperServlet extends GHBaseServlet {
         double minRoadScore = getDoubleParam(httpReq, MIN_ROAD_SCORE, DEFAULT_MIN_ROAD_SCORE);
         int minRoadLength = getIntParam(httpReq, MIN_ROAD_LENGTH, DEFAULT_MIN_ROAD_LENGTH);
         int iterations = getIntParam(httpReq, MAX_ITERATIONS, DEFAULT_MAX_ITERATIONS);
+        long randomSeed = getLongParam(httpReq, SEED, System.currentTimeMillis());
 
         StopWatch sw = new StopWatch().start();
 
@@ -150,8 +151,9 @@ public class GraphHopperServlet extends GHBaseServlet {
                         put(WAY_POINT_MAX_DISTANCE, minPathPrecision).
                         put(MAX_DIST, maxDist).
                         put(MIN_ROAD_SCORE, minRoadScore).
-                        put(MIN_ROAD_LENGTH, minRoadLength)
-                        .put(MAX_ITERATIONS, iterations);
+                        put(MIN_ROAD_LENGTH, minRoadLength).
+                        put(MAX_ITERATIONS, iterations).
+                        put(SEED, randomSeed);
 
                 ghRsp = graphHopper.route(request);
             } catch (IllegalArgumentException ex) {

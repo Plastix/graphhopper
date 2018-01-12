@@ -238,7 +238,7 @@ final class Route {
     }
 
     public Path getPath(int s, int d, Graph graph, Weighting weighting) {
-        logger.info("Route cost: " + getCost());
+        logger.debug("Route cost: " + getCost());
         Path path = new Path(graph, weighting);
 
         Arc temp = null;
