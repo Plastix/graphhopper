@@ -21,6 +21,7 @@ import com.graphhopper.storage.index.QueryResult;
 import com.graphhopper.util.BreadthFirstSearch;
 import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.PMap;
+import com.graphhopper.util.Parameters;
 import com.graphhopper.util.shapes.GHPoint;
 import com.graphhopper.util.shapes.GHPoint3D;
 import com.graphhopper.util.shapes.Shape;
@@ -37,25 +38,23 @@ import static com.graphhopper.util.Parameters.Routing.*;
 
 public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements ShortestPathCalculator {
 
-    private static final double MIN_ROAD_SCORE = 0.5;
-    private static final int MIN_ROAD_LENGTH = 1000;
-
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
+    // Constants passed in as parameters
+    private final double MIN_ROAD_SCORE;
+    private final int MIN_ROAD_LENGTH;
+    private final double MAX_COST;
+    private final int MAX_ITERATIONS;
+
+    private Graph baseGraph;
+    private LocationIndex locationIndex;
+    private NodeAccess nodeAccess;
     private EdgeFilter levelEdgeFilter; // Used for CH Dijkstra search
     private EdgeFilter bikeEdgeFilter;
     private Weighting bikePriorityWeighting;
-    private Graph baseGraph;
-    private PMap params;
     private Random random;
 
-    private LocationIndex locationIndex;
-
-    private NodeAccess nodeAccess;
-
     private boolean isFinished = false;
-    private double maxCost;
-    private int maxIterations;
 
     /**
      * @param graph specifies the graph where this algorithm will run on
@@ -69,19 +68,16 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         this.levelEdgeFilter = levelEdgeFilter;
         bikeEdgeFilter = new DefaultEdgeFilter(flagEncoder);
         bikePriorityWeighting = new BikePriorityWeighting(flagEncoder);
-        this.params = params;
         random = new Random();
 
-        // Uber hackyness
+        // TODO (Aidan) Uber hackyness
         locationIndex = new LocationIndexTree(((QueryGraph) baseGraph).getMainGraph().getBaseGraph(), new RAMDirectory())
                 .prepareIndex();
 
-        parseParams();
-    }
-
-    private void parseParams() {
-        maxCost = params.getDouble(MAX_DIST, DEFAULT_MAX_DIST);
-        maxIterations = params.getInt(MAX_ITERATIONS, DEFAULT_MAX_ITERATIONS);
+        MAX_COST = params.getDouble(MAX_DIST, DEFAULT_MAX_DIST);
+        MAX_ITERATIONS = params.getInt(Parameters.Routing.MAX_ITERATIONS, DEFAULT_MAX_ITERATIONS);
+        MIN_ROAD_SCORE = params.getDouble(Parameters.Routing.MIN_ROAD_SCORE, DEFAULT_MIN_ROAD_SCORE);
+        MIN_ROAD_LENGTH = params.getInt(Parameters.Routing.MIN_ROAD_LENGTH, DEFAULT_MIN_ROAD_LENGTH);
     }
 
     @Override
@@ -92,13 +88,13 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
     private Path runILS(int s, int d) {
         Route solution;
-        if(shortestPath(s, d).getDistance() > maxCost) {
+        if(shortestPath(s, d).getDistance() > MAX_COST) {
             solution = Route.newRoute(this, s, d);
         } else {
             solution = initialize(s, d);
 
             logger.info("Running ILS...");
-            for(int i = 0; i < maxIterations; i++) {
+            for(int i = 0; i < MAX_ITERATIONS; i++) {
                 logger.info("Iteration " + i);
                 List<Arc> arcs = solution.getCandidateArcsByIP();
                 logger.info("Possible arcs to remove from solution: " + arcs.size());
@@ -106,7 +102,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                 int randomIndex = random.nextInt(arcs.size());
                 Arc e = arcs.remove(randomIndex);
 
-                double b1 = (maxCost - solution.getCost()) + e.cost; // Remaining budget after removing e from solution
+                double b1 = (MAX_COST - solution.getCost()) + e.cost; // Remaining budget after removing e from solution
 
                 Route path = generatePath(solution.getPrev(e).adjNode, solution.getNext(e).baseNode, b1, e.score, e.getCas());
 
@@ -115,7 +111,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                     int index = solution.removeArc(e);
                     solution.insertRoute(index, path);
                     for(Arc arc : solution.getArcs()) {
-                        double b2 = (maxCost - solution.getCost()) + arc.cost; // Remaining budget after removing arc from solution
+                        double b2 = (MAX_COST - solution.getCost()) + arc.cost; // Remaining budget after removing arc from solution
 
                         int startCAS = solution.getPrev(arc).adjNode;
                         int endCAS = solution.getNext(arc).baseNode;
@@ -142,8 +138,8 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     private Route initialize(int s, int d) {
         Route route = Route.newRoute(this, s, d);
         // Add fake edge to start solution
-        Arc arc = new Arc(-1, s, d, maxCost, 0);
-        arc.setCas(computeCAS(null, s, d, maxCost));
+        Arc arc = new Arc(-1, s, d, MAX_COST, 0);
+        arc.setCas(computeCAS(null, s, d, MAX_COST));
         route.addArc(0, arc);
 
         return route;
