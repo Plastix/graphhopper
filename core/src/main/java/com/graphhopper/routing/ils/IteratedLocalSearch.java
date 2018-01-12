@@ -45,6 +45,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     private final int MIN_ROAD_LENGTH;
     private final double MAX_COST;
     private final int MAX_ITERATIONS;
+    private final long SEED;
 
     private Graph baseGraph;
     private LocationIndex locationIndex;
@@ -68,7 +69,6 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         this.levelEdgeFilter = levelEdgeFilter;
         bikeEdgeFilter = new DefaultEdgeFilter(flagEncoder);
         bikePriorityWeighting = new BikePriorityWeighting(flagEncoder);
-        random = new Random();
 
         // TODO (Aidan) Uber hackyness
         locationIndex = new LocationIndexTree(((QueryGraph) baseGraph).getMainGraph().getBaseGraph(), new RAMDirectory())
@@ -78,6 +78,9 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         MAX_ITERATIONS = params.getInt(Parameters.Routing.MAX_ITERATIONS, DEFAULT_MAX_ITERATIONS);
         MIN_ROAD_SCORE = params.getDouble(Parameters.Routing.MIN_ROAD_SCORE, DEFAULT_MIN_ROAD_SCORE);
         MIN_ROAD_LENGTH = params.getInt(Parameters.Routing.MIN_ROAD_LENGTH, DEFAULT_MIN_ROAD_LENGTH);
+        SEED = params.getLong(Parameters.Routing.SEED, System.currentTimeMillis());
+
+        random = new Random(SEED);
     }
 
     @Override
@@ -93,11 +96,11 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         } else {
             solution = initialize(s, d);
 
-            logger.info("Running ILS...");
+            logger.info("Seed: " + SEED);
             for(int i = 0; i < MAX_ITERATIONS; i++) {
-                logger.info("Iteration " + i);
+                logger.debug("Iteration " + i);
                 List<Arc> arcs = solution.getCandidateArcsByIP();
-                logger.info("Possible arcs to remove from solution: " + arcs.size());
+                logger.debug("Possible arcs to remove from solution: " + arcs.size());
 
                 int randomIndex = random.nextInt(arcs.size());
                 Arc e = arcs.remove(randomIndex);
@@ -107,7 +110,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                 Route path = generatePath(solution.getPrev(e).adjNode, solution.getNext(e).baseNode, b1, e.score, e.getCas());
 
                 if(!path.isEmpty()) {
-                    logger.info("Found path with with dist " + path.getCost());
+                    logger.debug("Found path with with dist " + path.getCost());
                     int index = solution.removeArc(e);
                     solution.insertRoute(index, path);
                     for(Arc arc : solution.getArcs()) {
@@ -157,7 +160,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
             cas = getAllArcs(ellipse);
         }
 
-        logger.info("Starting to compute CAS! num arcs: " + cas.size() + " cost: " + cost);
+        logger.debug("Starting to compute CAS! num arcs: " + cas.size() + " cost: " + cost);
 
         outer:
         for(Arc arc : cas) {
@@ -178,13 +181,13 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
             }
         }
 
-        logger.info("Finished computing CAS! size: " + result.size());
+        logger.debug("Finished computing CAS! size: " + result.size());
 
         return result;
     }
 
     private List<Arc> getAllArcs(final Shape shape) {
-        logger.info("Fetching arcs from graph!");
+        logger.debug("Fetching arcs from graph!");
         final List<Arc> arcs = new ArrayList<>();
 
         GHPoint center = shape.getCenter();
@@ -223,7 +226,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
         bfs.start(baseGraph.createEdgeExplorer(bikeEdgeFilter), qr.getClosestNode());
 
-        logger.info("Got all arcs inside of ellipse! num: " + arcs.size());
+        logger.debug("Got all arcs inside of ellipse! num: " + arcs.size());
 
         return arcs;
     }
@@ -299,7 +302,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     }
 
     private Route generatePath(int s, int d, double dist, double minProfit, List<Arc> cas) {
-        logger.info("Generating path! dist: " + dist + " minProfit: " + minProfit + " cas size: " + cas.size());
+        logger.debug("Generating path! dist: " + dist + " minProfit: " + minProfit + " cas size: " + cas.size());
         Route route = Route.newRoute(this, s, d);
 
         List<Arc> arcs = getCandidateArcsByQR(cas);
