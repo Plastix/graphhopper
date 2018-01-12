@@ -11,6 +11,8 @@ import java.util.List;
  * In the ILS-CAS algorithm this represents an "attractive arc".
  */
 final class Arc {
+    static final int FAKE_ARC_ID = -1;
+
     final int edgeId, baseNode, adjNode;
     final double cost, score;
     double improvePotential, qualityRatio;

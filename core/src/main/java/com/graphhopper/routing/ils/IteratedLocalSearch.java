@@ -131,7 +131,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     private Route initialize(int s, int d) {
         Route route = Route.newRoute(this, baseGraph, weighting, s, d);
         // Add fake edge to start solution
-        Arc arc = new Arc(-1, s, d, MAX_COST, 0);
+        Arc arc = new Arc(Arc.FAKE_ARC_ID, s, d, MAX_COST, 0);
         arc.setCas(computeCAS(null, s, d, MAX_COST));
         route.addArc(0, arc);
 
