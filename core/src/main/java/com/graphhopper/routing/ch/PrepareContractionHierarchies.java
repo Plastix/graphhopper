@@ -22,6 +22,8 @@ import com.graphhopper.routing.*;
 import com.graphhopper.routing.util.*;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.*;
+import com.graphhopper.storage.index.LocationIndex;
+import com.graphhopper.storage.index.LocationIndexTree;
 import com.graphhopper.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,6 +74,8 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation imple
     private double lazyTime;
     private double neighborTime;
 
+    private LocationIndex locationIndex;
+
     public PrepareContractionHierarchies(Directory dir, GraphHopperStorage ghStorage, CHGraph chGraph,
                                          Weighting weighting, TraversalMode traversalMode) {
         this.dir = dir;
@@ -80,6 +84,10 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation imple
         this.traversalMode = traversalMode;
         this.weighting = weighting;
         prepareWeighting = new PreparationWeighting(weighting);
+
+        // TODO (Aidan) Move this out of here
+        locationIndex = new LocationIndexTree(ghStorage.getBaseGraph(), new RAMDirectory())
+                .prepareIndex();
     }
 
     /**

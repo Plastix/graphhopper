@@ -61,7 +61,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
      * @param graph specifies the graph where this algorithm will run on
      */
     public IteratedLocalSearch(Graph graph, Weighting weighting,
-                               EdgeFilter levelEdgeFilter, PMap params) {
+                               EdgeFilter levelEdgeFilter, PMap params, LocationIndex locationIndex) {
         super(graph, weighting, TraversalMode.EDGE_BASED_1DIR);
 
         baseGraph = graph.getBaseGraph();
@@ -69,10 +69,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         this.levelEdgeFilter = levelEdgeFilter;
         bikeEdgeFilter = new DefaultEdgeFilter(flagEncoder);
         bikePriorityWeighting = new BikePriorityWeighting(flagEncoder);
-
-        // TODO (Aidan) Uber hackyness
-        locationIndex = new LocationIndexTree(((QueryGraph) baseGraph).getMainGraph().getBaseGraph(), new RAMDirectory())
-                .prepareIndex();
+        this.locationIndex = locationIndex;
 
         MAX_COST = params.getDouble(MAX_DIST, DEFAULT_MAX_DIST);
         MAX_ITERATIONS = params.getInt(Parameters.Routing.MAX_ITERATIONS, DEFAULT_MAX_ITERATIONS);
