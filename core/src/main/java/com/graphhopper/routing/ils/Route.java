@@ -24,13 +24,14 @@ final class Route {
     private Weighting weighting;
     private ShortestPathCalculator sp;
     private final int s, d; // Start & End Node IDs
+    private final double MAX_COST;
 
     private List<Arc> arcs; // List of "attractive arcs" in the Route
     private List<Path> blankSegments; // List of shortest paths connecting non-contiguous attractive arcs.
     private IntHashSet arcIds; // Hashset of Arc IDs from arcs
     private double cost, score; // Current
 
-    private Route(ShortestPathCalculator shortestPathCalculator, Graph graph, Weighting weighting, int s, int d) {
+    private Route(ShortestPathCalculator shortestPathCalculator, Graph graph, Weighting weighting, int s, int d, double maxCost) {
         sp = shortestPathCalculator;
         arcs = new ArrayList<>();
         blankSegments = new ArrayList<>();
@@ -41,6 +42,7 @@ final class Route {
         this.graph = graph;
         this.weighting = weighting;
         arcIds = new IntHashSet();
+        MAX_COST = maxCost;
     }
 
     /**
@@ -54,8 +56,8 @@ final class Route {
      * @return New Route Instance.
      */
     static Route newRoute(@NotNull ShortestPathCalculator sp, @NotNull Graph graph,
-                          @NotNull Weighting weighting, int s, int d) {
-        return new Route(sp, graph, weighting, s, d);
+                          @NotNull Weighting weighting, int s, int d, double maxCost) {
+        return new Route(sp, graph, weighting, s, d, maxCost);
     }
 
     /**
@@ -219,6 +221,15 @@ final class Route {
      */
     double getScore() {
         return score;
+    }
+
+    /**
+     * Returns the leftover budget after subtracting the current Route's cost.
+     *
+     * @return Remaining cost left in budget.
+     */
+    double getRemainingCost() {
+        return MAX_COST - cost;
     }
 
     /**
