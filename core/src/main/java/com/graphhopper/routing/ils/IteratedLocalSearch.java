@@ -123,7 +123,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                     logger.debug("Found path with with dist " + path.getCost());
                     int index = solution.removeArc(e);
                     solution.insertRoute(index, path);
-                    for(Arc arc : solution.getArcs()) {
+                    for(Arc arc : solution) {
                         double b2 = solution.getRemainingCost() + arc.cost; // Remaining budget after removing arc from solution
 
                         int startCAS = solution.getPrev(arc);
