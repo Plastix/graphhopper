@@ -63,58 +63,41 @@ final class Route {
     }
 
     public int removeArc(@NotNull Arc a) {
-        int length = getNumArcs();
         int index = arcs.indexOf(a);
 
-        // We only need to remove blank path segments if we have at least one arc
-        if(length > 0) {
-            if(index == 0) {
-                Path first = blankSegments.remove(0);
-                cost -= first.getDistance();
+        if(index == -1) {
+            return index;
+        }
 
-                Path second = blankSegments.remove(0);
-                cost -= second.getDistance();
+        Path segment1 = blankSegments.remove(index);
+        Path segment2 = blankSegments.remove(index);
 
-                if(length > 1) {
-                    Path segment = sp.shortestPath(s, arcs.get(1).baseNode);
-                    cost += segment.getDistance();
-                    blankSegments.add(0, segment);
-                }
-            } else if(index == length - 1) {
-                Path first = blankSegments.remove(blankSegments.size() - 1);
-                cost -= first.getDistance();
+        cost -= segment1.getDistance();
+        cost -= segment2.getDistance();
 
-                Path second = blankSegments.remove(blankSegments.size() - 1);
-                cost -= second.getDistance();
+        int length = getNumArcs();
+        if(length > 1) {
+            int start = s;
+            int end = d;
 
-                if(length > 1) {
-                    Path segment = sp.shortestPath(arcs.get(length - 2).adjNode, d);
-                    cost += segment.getDistance();
-                    blankSegments.add(segment);
-                }
-
-            } else if(index > 0 && index < length) {
-                // Remove middle arc: remove two blank path segments and add a new one
-                // 1-2-3 --> 1-3
-                Arc prevArc = arcs.get(index - 1);
-                Arc nextArc = arcs.get(index + 1);
-
-                Path segment1 = blankSegments.remove(index);
-                Path segment2 = blankSegments.remove(index);
-
-                cost -= segment1.getDistance();
-                cost -= segment2.getDistance();
-
-                Path segment = sp.shortestPath(prevArc.adjNode, nextArc.baseNode);
-                blankSegments.add(index, segment);
-                cost += segment.getDistance();
+            int prevIndex = index - 1;
+            if(prevIndex >= 0 && prevIndex <= length - 1) {
+                start = arcs.get(prevIndex).adjNode;
             }
 
-            arcs.remove(index);
-            cost -= a.cost;
-            score -= a.score;
-            arcIds.remove(a.edgeId);
+            int nextIndex = index + 1;
+            if(nextIndex <= length - 1) {
+                end = arcs.get(nextIndex).baseNode;
+            }
+            Path segment = sp.shortestPath(start, end);
+            blankSegments.add(index, segment);
+            cost += segment.getDistance();
         }
+
+        arcs.remove(index);
+        cost -= a.cost;
+        score -= a.score;
+        arcIds.remove(a.edgeId);
 
         return index;
     }
