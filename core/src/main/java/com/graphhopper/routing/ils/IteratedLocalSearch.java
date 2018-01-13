@@ -177,6 +177,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         Shape ellipse = new Ellipse(focus1, focus2, cost);
 
         // If we don't have a CAS yet
+        // Fetch arcs from the graph using spatial indices
         if(cas == null) {
             cas = getAllArcs(ellipse);
         }
@@ -186,18 +187,21 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         outer:
         for(Arc arc : cas) {
 
+            // Basic restrictions on attractive arcs
             if(arc.score < MIN_ROAD_SCORE || arc.cost < MIN_ROAD_LENGTH) {
                 continue;
             }
 
+            // Spatial-based feasibility checking
             for(GHPoint3D ghPoint3D : arc.points) {
                 if(!ellipse.contains(ghPoint3D.lat, ghPoint3D.lon)) {
                     continue outer;
                 }
             }
 
+            // Check arc feasibility
             if(getPathCost(s, d, arc) <= cost) {
-                arc.qualityRatio = calcQualityRatio(s, d, arc);
+                calcQualityRatio(arc, s, d);
                 result.add(arc);
             }
         }
@@ -280,13 +284,13 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
      * Updates the Candidate Arc Set for the specified Arc.
      *
      * @param arc       Arc to update.
-     * @param v1        Start Node Id.
-     * @param v2        End Node Id.
+     * @param s         Start Node Id.
+     * @param d         End Node Id.
      * @param newBudget New allowable budget.
      * @param oldBudget Old allowable budget.
      * @return New CAS
      */
-    private List<Arc> updateCAS(@NotNull Arc arc, int v1, int v2, double newBudget,
+    private List<Arc> updateCAS(@NotNull Arc arc, int s, int d, double newBudget,
                                 double oldBudget) {
         List<Arc> cas = new ArrayList<>(arc.getCas());
 
@@ -295,12 +299,12 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
             for(int i = 0; i < cas.size(); i++) {
                 Arc e = cas.get(i);
                 // Remove any arc whose path is too big
-                if(getPathCost(v1, v2, e) > newBudget) {
+                if(getPathCost(s, d, e) > newBudget) {
                     cas.remove(i);
                 }
             }
         } else if(newBudget > oldBudget) {
-            cas = computeCAS(null, v1, v2, newBudget);
+            cas = computeCAS(null, s, d, newBudget);
         }
 
         return cas;
@@ -309,14 +313,13 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     /**
      * Computes the Quality Ratio for the specified Arc.
      *
-     * @param v1  Start Node ID.
-     * @param v2  End Node ID.
      * @param arc Arc.
-     * @return Quality Ratio score.
+     * @param s   Start Node ID.
+     * @param d   End Node ID.
      */
-    private double calcQualityRatio(int v1, int v2, @NotNull Arc arc) {
-        Path sp1 = shortestPath(v1, arc.baseNode);
-        Path sp2 = shortestPath(arc.adjNode, v2);
+    private void calcQualityRatio(@NotNull Arc arc, int s, int d) {
+        Path sp1 = shortestPath(s, arc.baseNode);
+        Path sp2 = shortestPath(arc.adjNode, d);
 
         double value = 0;
 
@@ -329,7 +332,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
         value += arc.score;
 
-        return value / (sp1.getDistance() + arc.cost + sp2.getDistance());
+        arc.qualityRatio = value / (sp1.getDistance() + arc.cost + sp2.getDistance());
     }
 
     /**

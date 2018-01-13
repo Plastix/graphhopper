@@ -295,7 +295,7 @@ final class Route {
         List<Arc> result = new ArrayList<>();
         double avgIP = 0;
         for(Arc ca : arcs) {
-            ca.improvePotential = calcImprovePotential(ca);
+            calcImprovePotential(ca);
             avgIP += ca.improvePotential;
         }
         avgIP /= arcs.size();
@@ -313,9 +313,8 @@ final class Route {
      * Calculates the Improve Potential score of a given arc.
      *
      * @param arc Arc to calculate
-     * @return Improve Potential score.
      */
-    private double calcImprovePotential(Arc arc) {
+    private void calcImprovePotential(@NotNull Arc arc) {
         int v1 = getPrev(arc);
         int v2 = getNext(arc);
 
@@ -332,7 +331,7 @@ final class Route {
         double result = score / (maxDist - dist);
 
         // Hacky fix for NaN values
-        return Double.isNaN(result) ? 0 : result;
+        arc.improvePotential = Double.isNaN(result) ? 0 : result;
     }
 
     /**
