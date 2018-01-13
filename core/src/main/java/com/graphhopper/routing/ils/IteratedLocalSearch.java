@@ -131,9 +131,9 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
                         if(path.contains(arc) || arc.adjNode == startCAS || arc.baseNode == endCAS) {
                             // Using removed arc's CAS to compute next CAS (inherit)
-                            arc.setCas(computeCAS(e.getCas(), startCAS, endCAS, b2));
+                            computeCAS(arc, e.getCas(), startCAS, endCAS, b2);
                         } else {
-                            arc.setCas(updateCAS(arc, startCAS, endCAS, b1, b2));
+                            updateCAS(arc, startCAS, endCAS, b1, b2);
                         }
                     }
                 }
@@ -154,7 +154,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         Route route = Route.newRoute(this, baseGraph, weighting, s, d, MAX_COST);
         // Add fake edge to start solution
         Arc arc = new Arc(Arc.FAKE_ARC_ID, s, d, MAX_COST, 0, PointList.EMPTY);
-        arc.setCas(computeCAS(null, s, d, MAX_COST));
+        computeCAS(arc, null, s, d, MAX_COST);
         route.addArc(0, arc);
 
         return route;
@@ -163,13 +163,13 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     /**
      * Computes the Candidate Arc Set for the specified start, end, and cost parameters.
      *
+     * @param arc  Arc to set CAS on.
      * @param cas  Current CAS. May be null.
      * @param s    Start Node ID.
      * @param d    End Node Id.
      * @param cost Cost allowance.
-     * @return CAS
      */
-    private List<Arc> computeCAS(@Nullable List<Arc> cas, int s, int d, double cost) {
+    private void computeCAS(Arc arc, @Nullable List<Arc> cas, int s, int d, double cost) {
         List<Arc> result = new ArrayList<>();
 
         GHPoint focus1 = new GHPoint(nodeAccess.getLatitude(s), nodeAccess.getLongitude(s));
@@ -185,30 +185,30 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         logger.debug("Starting to compute CAS! num arcs: " + cas.size() + " cost: " + cost);
 
         outer:
-        for(Arc arc : cas) {
+        for(Arc e : cas) {
 
             // Basic restrictions on attractive arcs
-            if(arc.score < MIN_ROAD_SCORE || arc.cost < MIN_ROAD_LENGTH) {
+            if(e.score < MIN_ROAD_SCORE || e.cost < MIN_ROAD_LENGTH) {
                 continue;
             }
 
             // Spatial-based feasibility checking
-            for(GHPoint3D ghPoint3D : arc.points) {
+            for(GHPoint3D ghPoint3D : e.points) {
                 if(!ellipse.contains(ghPoint3D.lat, ghPoint3D.lon)) {
                     continue outer;
                 }
             }
 
             // Check arc feasibility
-            if(getPathCost(s, d, arc) <= cost) {
-                calcQualityRatio(arc, s, d);
-                result.add(arc);
+            if(getPathCost(s, d, e) <= cost) {
+                calcQualityRatio(e, s, d);
+                result.add(e);
             }
         }
 
         logger.debug("Finished computing CAS! size: " + result.size());
 
-        return result;
+        arc.setCas(result);
     }
 
     /**
@@ -288,14 +288,11 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
      * @param d         End Node Id.
      * @param newBudget New allowable budget.
      * @param oldBudget Old allowable budget.
-     * @return New CAS
      */
-    private List<Arc> updateCAS(@NotNull Arc arc, int s, int d, double newBudget,
-                                double oldBudget) {
-        List<Arc> cas = new ArrayList<>(arc.getCas());
-
+    private void updateCAS(@NotNull Arc arc, int s, int d, double newBudget, double oldBudget) {
         // Restrict CAS using inherit property
         if(newBudget < oldBudget) {
+            List<Arc> cas = arc.getCas();
             for(int i = 0; i < cas.size(); i++) {
                 Arc e = cas.get(i);
                 // Remove any arc whose path is too big
@@ -303,11 +300,10 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                     cas.remove(i);
                 }
             }
+            arc.setCas(cas);
         } else if(newBudget > oldBudget) {
-            cas = computeCAS(null, s, d, newBudget);
+            computeCAS(arc, null, s, d, newBudget);
         }
-
-        return cas;
     }
 
     /**
