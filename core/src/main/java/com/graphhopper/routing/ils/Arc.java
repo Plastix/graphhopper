@@ -2,6 +2,7 @@ package com.graphhopper.routing.ils;
 
 import com.graphhopper.util.PointList;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -15,19 +16,31 @@ final class Arc {
 
     final int edgeId, baseNode, adjNode;
     final double cost, score;
-    double improvePotential, qualityRatio;
-    private List<Arc> cas;
-    private PointList points;
+    final PointList points; // Points along the arc
 
-    Arc(int edgeId, int baseNode, int adjNode, double cost, double score) {
+    double improvePotential, qualityRatio; // Metrics used by ILS algorithm
+    private List<Arc> cas; // Candidate Arc Set of this arc
+
+    /**
+     * Constructor for creating a new Arc object.
+     *
+     * @param edgeId   The ID of the current edge in the graph.
+     * @param baseNode The node ID of the first node which this arc connects.
+     * @param adjNode  The node ID of the second nod which this arc connects.
+     * @param cost     The distance of the road, in meters.
+     * @param score    The score of the arc.
+     * @param points   Points on the map of the arc.
+     */
+    Arc(int edgeId, int baseNode, int adjNode, double cost, double score, PointList points) {
         this.edgeId = edgeId;
         this.baseNode = baseNode;
         this.adjNode = adjNode;
         this.cost = cost;
         this.score = score;
+        this.points = points;
         improvePotential = -1;
         qualityRatio = -1;
-
+        cas = new ArrayList<>();
     }
 
     @Override
@@ -37,20 +50,22 @@ final class Arc {
                 '}';
     }
 
+    /**
+     * Gets the Candidate Arc Set of the current Arc.
+     *
+     * @return CAS
+     */
     public List<Arc> getCas() {
         return cas;
     }
 
+    /**
+     * Updates the Candidate Arc Set of the current Arc.
+     *
+     * @param cas Candidate Arc Set to update.
+     */
     public void setCas(List<Arc> cas) {
         this.cas = cas;
-    }
-
-    public PointList getPoints() {
-        return points;
-    }
-
-    public void setPoints(PointList points) {
-        this.points = points;
     }
 
     @Override
@@ -60,9 +75,7 @@ final class Arc {
 
         Arc arc = (Arc) o;
 
-        if(edgeId != arc.edgeId) return false;
-        if(baseNode != arc.baseNode) return false;
-        return adjNode == arc.adjNode;
+        return edgeId == arc.edgeId && baseNode == arc.baseNode && adjNode == arc.adjNode;
     }
 
     @Override

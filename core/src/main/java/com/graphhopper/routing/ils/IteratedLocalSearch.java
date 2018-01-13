@@ -8,15 +8,11 @@ import com.graphhopper.routing.ch.PrepareContractionHierarchies;
 import com.graphhopper.routing.util.DefaultEdgeFilter;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.TraversalMode;
-import com.graphhopper.routing.weighting.BikePriorityWeighting;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.storage.index.LocationIndex;
 import com.graphhopper.storage.index.QueryResult;
-import com.graphhopper.util.BreadthFirstSearch;
-import com.graphhopper.util.EdgeIteratorState;
-import com.graphhopper.util.PMap;
-import com.graphhopper.util.Parameters;
+import com.graphhopper.util.*;
 import com.graphhopper.util.shapes.GHPoint;
 import com.graphhopper.util.shapes.GHPoint3D;
 import com.graphhopper.util.shapes.Shape;
@@ -31,6 +27,10 @@ import java.util.Random;
 
 import static com.graphhopper.util.Parameters.Routing.*;
 
+/**
+ * Routing Algorithm which implements the bike route Iterated Local Search algorithm from the following paper:
+ * https://dl.acm.org/citation.cfm?id=2820835
+ */
 public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements ShortestPathCalculator {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -45,14 +45,22 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     private Graph baseGraph;
     private LocationIndex locationIndex;
     private EdgeFilter levelEdgeFilter; // Used for CH Dijkstra search
-    private EdgeFilter bikeEdgeFilter;
-    private Weighting bikePriorityWeighting;
+    private EdgeFilter edgeFilter; // Determines which edges are considered in CAS
+    private Weighting bikePriorityWeighting; // Used for scoring arcs
     private Random random;
+    private int s, d; // Start and End Node IDs
+
 
     private boolean isFinished = false;
 
     /**
-     * @param graph specifies the graph where this algorithm will run on
+     * Creates a new ILS algorithm instance.
+     *
+     * @param graph           Graph to run algorithm on.
+     * @param weighting       Weighting to calculate costs.
+     * @param levelEdgeFilter Edge filter for CH shortest path computation
+     * @param params          Parameters map.
+     * @param locationIndex   Location Index of graph.
      */
     public IteratedLocalSearch(Graph graph, Weighting weighting,
                                EdgeFilter levelEdgeFilter, PMap params, LocationIndex locationIndex) {
@@ -61,7 +69,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         baseGraph = graph.getBaseGraph();
         this.levelEdgeFilter = levelEdgeFilter;
         this.locationIndex = locationIndex;
-        bikeEdgeFilter = new DefaultEdgeFilter(flagEncoder);
+        edgeFilter = new DefaultEdgeFilter(flagEncoder);
         bikePriorityWeighting = new BikePriorityWeighting(flagEncoder);
 
         MAX_COST = params.getDouble(MAX_DIST, DEFAULT_MAX_DIST);
@@ -73,18 +81,30 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         random = new Random(SEED);
     }
 
+    /**
+     * Calculates a route between the specified node IDs.
+     *
+     * @param from Start Node ID.
+     * @param to   End Node ID.
+     * @return Path
+     */
     @Override
     public Path calcPath(int from, int to) {
         checkAlreadyRun();
-        return runILS(from, to);
+        s = from;
+        d = to;
+        return runILS();
     }
 
-    private Path runILS(int s, int d) {
+    /**
+     * Main algorithm loop
+     */
+    private Path runILS() {
         Route solution;
         if(shortestPath(s, d).getDistance() > MAX_COST) {
             solution = Route.newRoute(this, baseGraph, weighting, s, d);
         } else {
-            solution = initialize(s, d);
+            solution = initializeSolution();
 
             logger.info("Seed: " + SEED);
             for(int i = 0; i < MAX_ITERATIONS; i++) {
@@ -125,16 +145,30 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         return solution.getPath();
     }
 
-    private Route initialize(int s, int d) {
+    /**
+     * Creates a new Route, adds a fake arc, and computes first CAS.
+     *
+     * @return Route.
+     */
+    private Route initializeSolution() {
         Route route = Route.newRoute(this, baseGraph, weighting, s, d);
         // Add fake edge to start solution
-        Arc arc = new Arc(Arc.FAKE_ARC_ID, s, d, MAX_COST, 0);
+        Arc arc = new Arc(Arc.FAKE_ARC_ID, s, d, MAX_COST, 0, PointList.EMPTY);
         arc.setCas(computeCAS(null, s, d, MAX_COST));
         route.addArc(0, arc);
 
         return route;
     }
 
+    /**
+     * Computes the Candidate Arc Set for the specified start, end, and cost parameters.
+     *
+     * @param cas  Current CAS. May be null.
+     * @param s    Start Node ID.
+     * @param d    End Node Id.
+     * @param cost Cost allowance.
+     * @return CAS
+     */
     private List<Arc> computeCAS(@Nullable List<Arc> cas, int s, int d, double cost) {
         List<Arc> result = new ArrayList<>();
 
@@ -156,7 +190,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                 continue;
             }
 
-            for(GHPoint3D ghPoint3D : arc.getPoints()) {
+            for(GHPoint3D ghPoint3D : arc.points) {
                 if(!ellipse.contains(ghPoint3D.lat, ghPoint3D.lon)) {
                     continue outer;
                 }
@@ -173,12 +207,18 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         return result;
     }
 
+    /**
+     * Fetches all Arcs from the graph which are contained inside of the specified Shape.
+     *
+     * @param shape Shape.
+     * @return Arc list.
+     */
     private List<Arc> getAllArcs(final Shape shape) {
         logger.debug("Fetching arcs from graph!");
         final List<Arc> arcs = new ArrayList<>();
 
         GHPoint center = shape.getCenter();
-        QueryResult qr = locationIndex.findClosest(center.getLat(), center.getLon(), bikeEdgeFilter);
+        QueryResult qr = locationIndex.findClosest(center.getLat(), center.getLon(), edgeFilter);
         // TODO: if there is no street close to the center it'll fail although there are roads covered. Maybe we should check edge points or some random points in the Shape instead?
         if(!qr.isValid())
             throw new IllegalArgumentException("Shape " + shape + " does not cover graph");
@@ -211,13 +251,19 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         };
 
 
-        bfs.start(baseGraph.createEdgeExplorer(bikeEdgeFilter), qr.getClosestNode());
+        bfs.start(baseGraph.createEdgeExplorer(edgeFilter), qr.getClosestNode());
 
         logger.debug("Got all arcs inside of ellipse! num: " + arcs.size());
 
         return arcs;
     }
 
+    /**
+     * Returns an Arc object instance from the specified EdgeIterator from the Graph.
+     *
+     * @param edgeIterator Edge
+     * @return Arc
+     */
     private Arc getArc(EdgeIteratorState edgeIterator) {
         int edge = edgeIterator.getEdge();
         int baseNode = edgeIterator.getBaseNode();
@@ -227,12 +273,19 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         double edgeScore = bikePriorityWeighting
                 .calcWeight(edgeIterator, false, baseNode);
 
-        Arc arc = new Arc(edge, baseNode, adjNode, edgeCost, edgeScore);
-
-        arc.setPoints(edgeIterator.fetchWayGeometry(0));
-        return arc;
+        return new Arc(edge, baseNode, adjNode, edgeCost, edgeScore, edgeIterator.fetchWayGeometry(0));
     }
 
+    /**
+     * Updates the Candidate Arc Set for the specified Arc.
+     *
+     * @param arc       Arc to update.
+     * @param v1        Start Node Id.
+     * @param v2        End Node Id.
+     * @param newBudget New allowable budget.
+     * @param oldBudget Old allowable budget.
+     * @return New CAS
+     */
     private List<Arc> updateCAS(@NotNull Arc arc, int v1, int v2, double newBudget,
                                 double oldBudget) {
         List<Arc> cas = new ArrayList<>(arc.getCas());
@@ -253,6 +306,14 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         return cas;
     }
 
+    /**
+     * Computes the Quality Ratio for the specified Arc.
+     *
+     * @param v1  Start Node ID.
+     * @param v2  End Node ID.
+     * @param arc Arc.
+     * @return Quality Ratio score.
+     */
     private double calcQualityRatio(int v1, int v2, @NotNull Arc arc) {
         Path sp1 = shortestPath(v1, arc.baseNode);
         Path sp2 = shortestPath(arc.adjNode, v2);
@@ -271,6 +332,12 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         return value / (sp1.getDistance() + arc.cost + sp2.getDistance());
     }
 
+    /**
+     * Returns a list of Arcs from the specified CAS whose Quality Ratio scores are above the average.
+     *
+     * @param cas CAS
+     * @return Arc list.
+     */
     private List<Arc> getCandidateArcsByQR(List<Arc> cas) {
         List<Arc> arcs = new ArrayList<>();
         double avgQR = 0;
@@ -288,6 +355,17 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         return arcs;
     }
 
+    /**
+     * Generates a Route from the specified start and end nodes whose distance is less than the specified budget and
+     * total score is above the specified.
+     *
+     * @param s         Start Node Id.
+     * @param d         End Node Id.
+     * @param dist      Allowable budget.
+     * @param minProfit Minimum required score.
+     * @param cas       CAS
+     * @return Route. May be empty!
+     */
     private Route generatePath(int s, int d, double dist, double minProfit, List<Arc> cas) {
         logger.debug("Generating path! dist: " + dist + " minProfit: " + minProfit + " cas size: " + cas.size());
         Route route = Route.newRoute(this, baseGraph, weighting, s, d);

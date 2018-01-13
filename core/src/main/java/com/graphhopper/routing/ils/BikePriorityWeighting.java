@@ -1,16 +1,18 @@
-package com.graphhopper.routing.weighting;
+package com.graphhopper.routing.ils;
 
 import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.routing.util.PriorityCode;
+import com.graphhopper.routing.weighting.AbstractWeighting;
 import com.graphhopper.util.EdgeIteratorState;
 
-import static com.graphhopper.routing.util.PriorityCode.BEST;
 import static com.graphhopper.routing.weighting.PriorityWeighting.KEY;
 
-// TODO (Aidan) 
+/**
+ * Weighting classed use to calculate scores of roads for the {@link IteratedLocalSearch} routing algorithm.
+ */
 public class BikePriorityWeighting extends AbstractWeighting {
 
-    public BikePriorityWeighting(FlagEncoder encoder) {
+    BikePriorityWeighting(FlagEncoder encoder) {
         super(encoder);
     }
 
@@ -19,6 +21,11 @@ public class BikePriorityWeighting extends AbstractWeighting {
         return PriorityCode.WORST.getValue();
     }
 
+    /**
+     * Weight is a number which corresponds to the "goodness" of a road for a bike. This is set in
+     * {@link com.graphhopper.routing.util.BikeCommonFlagEncoder}. Also see
+     * https://wiki.openstreetmap.org/wiki/Key:class:bicycle
+     */
     @Override
     public double calcWeight(EdgeIteratorState edgeState, boolean reverse, int prevOrNextEdgeId) {
         return flagEncoder.getDouble(edgeState.getFlags(), KEY);

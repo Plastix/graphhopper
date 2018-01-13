@@ -13,9 +13,9 @@ public interface ShortestPathCalculator {
     /**
      * Returns the total distance in meters of the path s --> arc --> d where "-->" is shortest path.
      *
-     * @param s   Start node ID
-     * @param d   End node ID
-     * @param arc Arc
+     * @param s   Start node ID.
+     * @param d   End node ID.
+     * @param arc Arc.
      * @return Distance in meters
      */
     double getPathCost(int s, int d, @NotNull Arc arc);
