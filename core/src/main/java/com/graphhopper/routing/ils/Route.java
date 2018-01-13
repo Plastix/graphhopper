@@ -223,8 +223,8 @@ final class Route {
     }
 
     private double calcImprovePotential(Arc arc) {
-        int v1 = getPrev(arc).adjNode;
-        int v2 = getNext(arc).baseNode;
+        int v1 = getPrev(arc);
+        int v2 = getNext(arc);
 
         double score = 0;
         double maxDist = 0;
@@ -242,16 +242,16 @@ final class Route {
         return Double.isNaN(result) ? 0 : result;
     }
 
-    public Arc getPrev(@NotNull Arc a) {
+    public int getPrev(@NotNull Arc a) {
         int index = arcs.indexOf(a);
 
-        return (index != -1 && index - 1 >= 0) ? arcs.get(index - 1) : a;
+        return (index != -1 && index - 1 >= 0) ? arcs.get(index - 1).adjNode : s;
     }
 
-    public Arc getNext(@NotNull Arc a) {
+    public int getNext(@NotNull Arc a) {
         int index = arcs.indexOf(a);
 
-        return (index != -1 && index + 1 <= getNumArcs() - 1) ? arcs.get(index + 1) : a;
+        return (index != -1 && index + 1 <= getNumArcs() - 1) ? arcs.get(index + 1).baseNode : d;
     }
 
     public Arc getArc(int index) {

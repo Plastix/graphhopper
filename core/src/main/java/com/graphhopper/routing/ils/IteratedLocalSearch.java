@@ -97,7 +97,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
                 double b1 = (MAX_COST - solution.getCost()) + e.cost; // Remaining budget after removing e from solution
 
-                Route path = generatePath(solution.getPrev(e).adjNode, solution.getNext(e).baseNode, b1, e.score, e.getCas());
+                Route path = generatePath(solution.getPrev(e), solution.getNext(e), b1, e.score, e.getCas());
 
                 if(!path.isEmpty()) {
                     logger.debug("Found path with with dist " + path.getCost());
@@ -106,8 +106,8 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                     for(Arc arc : solution.getArcs()) {
                         double b2 = (MAX_COST - solution.getCost()) + arc.cost; // Remaining budget after removing arc from solution
 
-                        int startCAS = solution.getPrev(arc).adjNode;
-                        int endCAS = solution.getNext(arc).baseNode;
+                        int startCAS = solution.getPrev(arc);
+                        int endCAS = solution.getNext(arc);
 
                         Arc prev = solution.getArc(index);
                         Arc next = solution.getArc(index + 1);
