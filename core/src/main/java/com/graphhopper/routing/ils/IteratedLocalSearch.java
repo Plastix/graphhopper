@@ -109,10 +109,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
                         int startCAS = solution.getPrev(arc);
                         int endCAS = solution.getNext(arc);
 
-                        Arc prev = solution.getArc(index);
-                        Arc next = solution.getArc(index + 1);
-
-                        if(path.contains(arc) || arc.equals(prev) || arc.equals(next)) {
+                        if(path.contains(arc) || arc.adjNode == startCAS || arc.baseNode == endCAS) {
                             // Using removed arc's CAS to compute next CAS (inherit)
                             arc.setCas(computeCAS(e.getCas(), startCAS, endCAS, b2));
                         } else {

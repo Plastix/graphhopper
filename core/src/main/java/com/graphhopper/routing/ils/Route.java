@@ -254,14 +254,6 @@ final class Route {
         return (index != -1 && index + 1 <= getNumArcs() - 1) ? arcs.get(index + 1).baseNode : d;
     }
 
-    public Arc getArc(int index) {
-        if(index >= 0 && index < getNumArcs()) {
-            return arcs.get(index);
-        }
-
-        return null;
-    }
-
     public boolean contains(@NotNull Arc a) {
         return arcIds.contains(a.edgeId);
     }
