@@ -5,10 +5,18 @@ import com.graphhopper.util.Helper;
 import com.graphhopper.util.shapes.BBox;
 import com.graphhopper.util.shapes.GHPoint;
 import com.graphhopper.util.shapes.Shape;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-public class Ellipse implements Shape {
+/**
+ * Class which represents an Ellipse on the map. Used by the {@link IteratedLocalSearch} algorithm for restricting
+ * the search space.
+ * <p>
+ * Note: This does not fully implement the Shape interface!
+ */
+class Ellipse implements Shape {
 
-    private DistanceCalc calc = Helper.DIST_EARTH;
+    private static DistanceCalc calc = Helper.DIST_EARTH;
+
     private GHPoint focus1;
     private GHPoint focus2;
     private double radius;
@@ -21,7 +29,7 @@ public class Ellipse implements Shape {
 
     @Override
     public boolean intersect(Shape o) {
-        return false;
+        throw new NotImplementedException();
     }
 
     @Override
@@ -32,12 +40,12 @@ public class Ellipse implements Shape {
 
     @Override
     public boolean contains(Shape s) {
-        return false;
+        throw new NotImplementedException();
     }
 
     @Override
     public BBox getBounds() {
-        return null;
+        throw new NotImplementedException();
     }
 
     @Override
@@ -64,6 +72,6 @@ public class Ellipse implements Shape {
 
     @Override
     public double calculateArea() {
-        return 0;
+        throw new NotImplementedException();
     }
 }
