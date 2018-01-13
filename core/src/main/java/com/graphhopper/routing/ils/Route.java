@@ -10,13 +10,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
  * Object which represents a path created by the {@link IteratedLocalSearch}
  * algorithm.
  */
-final class Route {
+final class Route implements Iterable<Arc> {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -278,15 +279,6 @@ final class Route {
     }
 
     /**
-     * Returns a list of the Attractive arcs in the Route, in order.
-     *
-     * @return Ordered Arc list.
-     */
-    List<Arc> getArcs() {
-        return arcs;
-    }
-
-    /**
      * Returns a list of Arcs from the Route whose Improve Potential scores are above the average.
      *
      * @return Arc list.
@@ -401,5 +393,10 @@ final class Route {
         } else if(sp.getPathCost(s, d, arc) <= budget) {
             addArc(0, arc);
         }
+    }
+
+    @Override
+    public Iterator<Arc> iterator() {
+        return arcs.iterator();
     }
 }
