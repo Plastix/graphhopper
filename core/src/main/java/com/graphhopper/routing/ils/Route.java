@@ -54,17 +54,7 @@ final class Route {
             throw new IndexOutOfBoundsException();
         }
 
-        if(index == 0) {
-            addLeadingPathSegment(arc, arc);
-        }
-
-        if(index == length) {
-            addTrailingPathSegment(arc, arc);
-        }
-
-        if(index > 0 && index < length) {
-            updateBorderingPathSegments(index, arc, arc);
-        }
+        updatePathSegments(index, arc, arc);
 
         arcs.add(index, arc);
         cost += arc.cost;
@@ -139,17 +129,7 @@ final class Route {
             Arc first = route.arcs.get(0);
             Arc last = route.arcs.get(route.getNumArcs() - 1);
 
-            if(index == 0) {
-                addLeadingPathSegment(first, last);
-            }
-
-            if(index == length) {
-                addTrailingPathSegment(first, last);
-            }
-
-            if(index > 0 && index < length) {
-                updateBorderingPathSegments(index, first, last);
-            }
+            updatePathSegments(index, first, last);
 
             // We need to remove the inserted routes starting and ending path cost
             // We recalculate the new path segments below
@@ -166,65 +146,34 @@ final class Route {
         }
     }
 
-    private void addLeadingPathSegment(Arc left, Arc right) {
-        if(!isEmpty()) {
-            // We have at least 2 blank path segments
-            Path removed = blankSegments.remove(0);
-            cost -= removed.getDistance();
+    private void updatePathSegments(int index, Arc left, Arc right) {
+        int length = getNumArcs();
+        int start = s, end = d;
 
-            Path segment = sp.shortestPath(right.adjNode, arcs.get(0).baseNode);
-            blankSegments.add(0, segment);
-            cost += segment.getDistance();
+        int startIndex = index - 1;
+        if(startIndex >= 0 && startIndex <= length - 1) {
+            start = arcs.get(startIndex).adjNode;
         }
 
-        Path segment = sp.shortestPath(s, left.baseNode);
-        blankSegments.add(0, segment);
-        cost += segment.getDistance();
-    }
-
-    private void addTrailingPathSegment(Arc left, Arc right) {
-        if(!isEmpty()) {
-            // We have at least 2 blank path segments
-            Path removed = blankSegments.remove(blankSegments.size() - 1);
-            cost -= removed.getDistance();
-
-            Path segment = sp.shortestPath(arcs.get(getNumArcs() - 1).adjNode, left.baseNode);
-            blankSegments.add(segment);
-            cost += segment.getDistance();
+        if(index <= length - 1) {
+            end = arcs.get(index).baseNode;
         }
 
-        Path segment = sp.shortestPath(right.adjNode, d);
-        blankSegments.add(segment);
-        cost += segment.getDistance();
+        Path segment1 = sp.shortestPath(start, left.baseNode);
+        cost += segment1.getDistance();
 
-    }
+        Path segment2 = sp.shortestPath(right.adjNode, end);
+        cost += segment2.getDistance();
 
-    private void updateBorderingPathSegments(int index, Arc left, Arc right) {
-        if(index < 1 || index > getNumArcs() - 1) {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
-        }
-
-        if(!isEmpty()) {
-            // Insert arc into middle of path
-            // Requires removing a blank path segment and creating two new ones
-            // 1-2-3 --> 1-4-2-3
-
-            // Guaranteed to not cause IOB because index >= 1 && <= length-1
-            Arc prevArc = arcs.get(index - 1);
-            Arc nextArc = arcs.get(index);
-
-            Path segment1 = sp.shortestPath(prevArc.adjNode, left.baseNode);
-            cost += segment1.getDistance();
-            Path segment2 = sp.shortestPath(right.adjNode, nextArc.baseNode);
-            cost += segment2.getDistance();
-
+        if(length > 0) {
             Path removed = blankSegments.remove(index);
             cost -= removed.getDistance();
-
-            blankSegments.add(index, segment2);
-            blankSegments.add(index, segment1);
         }
+
+        blankSegments.add(index, segment2);
+        blankSegments.add(index, segment1);
     }
+
 
     public double getCost() {
         return cost;
