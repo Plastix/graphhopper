@@ -19,6 +19,7 @@ package com.graphhopper.routing.ch;
 
 import com.graphhopper.coll.GHTreeMapComposed;
 import com.graphhopper.routing.*;
+import com.graphhopper.routing.ils.IteratedLocalSearch;
 import com.graphhopper.routing.util.*;
 import com.graphhopper.routing.weighting.AbstractWeighting;
 import com.graphhopper.routing.weighting.Weighting;
@@ -653,9 +654,9 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation imple
             algo.setMaxVisitedNodes(opts.getMaxVisitedNodes());
             algo.setEdgeFilter(levelFilter);
             return algo;
-        } else if (BIKE_LOOP.equals(opts.getAlgorithm())) {
+        } else if (ILS.equals(opts.getAlgorithm())) {
             PMap params = opts.getHints();
-            return new BikeLoop(graph, prepareWeighting, levelFilter, params);
+            return new IteratedLocalSearch(graph, prepareWeighting, levelFilter, params);
         } else {
             throw new IllegalArgumentException("Algorithm " + opts.getAlgorithm() + " not supported for Contraction Hierarchies. Try with ch.disable=true");
         }
