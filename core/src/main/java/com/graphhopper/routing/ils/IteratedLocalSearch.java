@@ -33,6 +33,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm {
     private Graph baseGraph;
 
     private boolean isFinished = false;
+    private int s, d;
 
     /**
      * @param graph specifies the graph where this algorithm will run on
@@ -55,22 +56,24 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm {
     @Override
     public Path calcPath(int from, int to) {
         checkAlreadyRun();
-        return runILS(from, to);
+        s = from;
+        d = to;
+        return runILS();
     }
 
-    private Path runILS(int s, int d) {
-        Route solution = initialize(s, d);
-        solution = improve(solution, s, d);
+    private Path runILS() {
+        Route solution = initialize();
+        solution = improve(solution);
         isFinished = true;
-        return getPath(solution, s, d);
+        return solution.getPath(baseGraph, weighting, s, d);
     }
 
-    private Route improve(Route solution, int s, int d) {
+    private Route improve(Route solution) {
         Route newPath = new Route();
         int a = 1, r = 1, count = 0;
         while(count < MAX_ITERATIONS) {
             Route temp = solution.copy();
-            int size = temp.edges.size();
+            int size = temp.length();
 
             if(r > size) {
                 r = 1;
@@ -98,9 +101,9 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm {
 
             // Don't allow search to traverse roads already in our path
             newPath.blacklist(temp);
-            if(localSearch(newPath, startId, endId, MAX_COST - temp.cost,
+            if(localSearch(newPath, startId, endId, MAX_COST - temp.getCost(),
                     minScore, MAX_DEPTH)) {
-                temp.splice(newPath, a - 1);
+                temp.insertRoute(newPath, a - 1);
                 solution = temp;
                 a = 1;
                 r = 1;
@@ -116,7 +119,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm {
         return solution;
     }
 
-    private Route initialize(int s, int d) {
+    private Route initialize() {
         Route route = new Route();
 
         if(!localSearch(route, s, d, MAX_COST, 0, MAX_DEPTH)) {
@@ -134,17 +137,17 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm {
 
         // Make sure to use baseGraph for traversal (non-CH version)
         EdgeExplorer explorer = baseGraph.createEdgeExplorer(bikeEdgeFilter);
-        EdgeIterator iter = explorer.setBaseNode(s);
+        EdgeIterator edgeIterator = explorer.setBaseNode(s);
 
-        while(iter.next()) {
-            int currentEdge = iter.getEdge();
+        while(edgeIterator.next()) {
+            int currentEdge = edgeIterator.getEdge();
 
-            if(route.bitSet.get(currentEdge)) {
+            if(route.containsEdge(currentEdge)) {
                 continue;
             }
 
-            double edgeCost = iter.getDistance();
-            int nextNode = iter.getAdjNode();
+            double edgeCost = edgeIterator.getDistance();
+            int nextNode = edgeIterator.getAdjNode();
 
             double remainingDist = dist - edgeCost;
             double shortestDist = shortestPath(nextNode, d);
@@ -154,13 +157,13 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm {
             }
 
             double edgeScore = bikePriorityWeighting
-                    .calcWeight(iter, false, nextNode);
+                    .calcWeight(edgeIterator, false, nextNode);
 
             route.addEdge(currentEdge, s, nextNode, edgeCost, edgeScore);
 
             if(nextNode == d &&
-                    route.cost >= MIN_COST &&
-                    route.score > minProfit) {
+                    route.getCost() >= MIN_COST &&
+                    route.getScore() > minProfit) {
                 return true;
             } else if(localSearch(route, nextNode, d, remainingDist,
                     minProfit, maxDepth - 1)) {
@@ -172,24 +175,6 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm {
 
         return false;
     }
-
-    private Path getPath(Route route, int s, int d) {
-        int numEdges = route.edges.size();
-        Path path = getPath();
-        for(int i = 0; i < numEdges; i++) {
-            Arc arc = route.edges.get(i);
-            path.processEdge(arc.edgeId, arc.adjNode, arc.edgeId);
-        }
-        return path
-                .setEndNode(d)
-                .setFromNode(s)
-                .setFound(!route.edges.isEmpty());
-    }
-
-    private Path getPath() {
-        return new Path(baseGraph, weighting);
-    }
-
 
     /**
      * Returns the shortest distance in meters between two nodes of the graph.

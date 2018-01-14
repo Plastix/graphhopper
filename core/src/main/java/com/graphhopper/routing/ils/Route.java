@@ -1,45 +1,49 @@
 package com.graphhopper.routing.ils;
 
+import com.carrotsearch.hppc.IntHashSet;
+import com.graphhopper.routing.Path;
+import com.graphhopper.routing.weighting.Weighting;
+import com.graphhopper.storage.Graph;
+
 import java.util.ArrayList;
-import java.util.BitSet;
 import java.util.List;
 
 /**
  * Object which represents a path created by the {@link IteratedLocalSearch} algorithm.
  */
 final class Route {
-    List<Arc> edges;
-    BitSet bitSet;
-    double cost;
-    double score;
+    private List<Arc> arcs;
+    private IntHashSet edges;
+    private double cost;
+    private double score;
 
     Route() {
-        edges = new ArrayList<>();
-        bitSet = new BitSet();
+        arcs = new ArrayList<>();
+        edges = new IntHashSet();
     }
 
     // Copy constructor
     private Route(Route route) {
         cost = route.cost;
         score = route.score;
-        edges = new ArrayList<>(route.edges);
-        bitSet = (BitSet) route.bitSet.clone();
+        arcs = new ArrayList<>(route.arcs);
+        edges = route.edges.clone();
     }
 
 
     void addEdge(int edgeId, int baseNode, int adjNode, double cost, double score) {
-        edges.add(new Arc(edgeId, baseNode, adjNode, cost, score));
-        bitSet.set(edgeId);
+        arcs.add(new Arc(edgeId, baseNode, adjNode, cost, score));
+        edges.add(edgeId);
         this.cost += cost;
         this.score += score;
     }
 
     void removeEdge(int edgeId) {
-        for(int i = edges.size() - 1; i >= 0; i--) {
-            Arc arc = edges.get(i);
+        for(int i = arcs.size() - 1; i >= 0; i--) {
+            Arc arc = arcs.get(i);
             if(arc.edgeId == edgeId) {
-                edges.remove(i);
-                bitSet.clear(edgeId);
+                arcs.remove(i);
+                edges.remove(edgeId);
                 cost -= arc.cost;
                 score -= arc.score;
                 break;
@@ -48,16 +52,16 @@ final class Route {
     }
 
     Arc removeEdgeIndex(int index) {
-        Arc arc = edges.remove(index);
-        bitSet.clear(arc.edgeId);
+        Arc arc = arcs.remove(index);
+        edges.remove(arc.edgeId);
         cost -= arc.cost;
         score -= arc.score;
         return arc;
     }
 
     void clear() {
+        arcs.clear();
         edges.clear();
-        bitSet.clear();
         cost = 0;
         score = 0;
     }
@@ -66,28 +70,42 @@ final class Route {
         return new Route(this);
     }
 
-    void splice(Route other, int index) {
-        edges.addAll(index, other.edges);
-        bitSet.or(other.bitSet);
+    boolean containsEdge(int edgeId) {
+        return edges.contains(edgeId);
+    }
+
+    void insertRoute(Route other, int index) {
+        arcs.addAll(index, other.arcs);
+        edges.addAll(other.edges);
         cost += other.cost;
         score += other.score;
     }
 
     void blacklist(Route other) {
-        bitSet.or(other.bitSet);
+        edges.addAll(other.edges);
     }
 
-    @Override
-    public String toString() {
-        StringBuilder stringBuilder = new StringBuilder();
-        for(Arc edge : edges) {
-            stringBuilder.append("(")
-                    .append(edge.baseNode)
-                    .append(",")
-                    .append(edge.adjNode)
-                    .append(") ->");
+    Path getPath(Graph graph, Weighting weighting, int s, int d) {
+        Path path = new Path(graph, weighting);
+        for(Arc arc : arcs) {
+            path.processEdge(arc.edgeId, arc.adjNode, arc.edgeId);
         }
-        return stringBuilder.toString();
+        return path
+                .setEndNode(d)
+                .setFromNode(s)
+                .setFound(!arcs.isEmpty());
+    }
+
+    public double getCost() {
+        return cost;
+    }
+
+    public double getScore() {
+        return score;
+    }
+
+    public int length(){
+        return arcs.size();
     }
 
 }
