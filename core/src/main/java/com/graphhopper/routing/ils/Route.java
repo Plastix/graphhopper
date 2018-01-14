@@ -343,7 +343,7 @@ final class Route implements Iterable<Arc> {
      */
     int getPrev(@NotNull Arc a) {
         if(!contains(a)) {
-            return -1;
+            return s;
         }
 
         int index = arcs.indexOf(a);
@@ -358,7 +358,7 @@ final class Route implements Iterable<Arc> {
      */
     int getNext(@NotNull Arc a) {
         if(!contains(a)) {
-            return -1;
+            return d;
         }
 
         int index = arcs.indexOf(a);
