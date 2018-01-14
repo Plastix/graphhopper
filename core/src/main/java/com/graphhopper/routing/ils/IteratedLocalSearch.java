@@ -10,8 +10,6 @@ import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
-import com.graphhopper.storage.index.LocationIndex;
-import com.graphhopper.storage.index.QueryResult;
 import com.graphhopper.util.*;
 import com.graphhopper.util.shapes.GHPoint;
 import com.graphhopper.util.shapes.GHPoint3D;
@@ -43,7 +41,6 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     private final long SEED;
 
     private Graph baseGraph;
-    private LocationIndex locationIndex;
     private EdgeFilter levelEdgeFilter; // Used for CH Dijkstra search
     private EdgeFilter edgeFilter; // Determines which edges are considered in CAS
     private Weighting scoreWeighting; // Used for scoring arcs
@@ -60,15 +57,13 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
      * @param weighting       Weighting to calculate costs.
      * @param levelEdgeFilter Edge filter for CH shortest path computation
      * @param params          Parameters map.
-     * @param locationIndex   Location Index of graph.
      */
     public IteratedLocalSearch(Graph graph, Weighting weighting,
-                               EdgeFilter levelEdgeFilter, PMap params, LocationIndex locationIndex) {
+                               EdgeFilter levelEdgeFilter, PMap params) {
         super(graph, weighting, TraversalMode.EDGE_BASED_1DIR);
 
         baseGraph = graph.getBaseGraph();
         this.levelEdgeFilter = levelEdgeFilter;
-        this.locationIndex = locationIndex;
         edgeFilter = new DefaultEdgeFilter(flagEncoder);
         scoreWeighting = new BikePriorityWeighting(flagEncoder);
 
@@ -174,12 +169,14 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
         GHPoint focus1 = new GHPoint(nodeAccess.getLatitude(s), nodeAccess.getLongitude(s));
         GHPoint focus2 = new GHPoint(nodeAccess.getLatitude(d), nodeAccess.getLongitude(d));
-        Shape ellipse = new Ellipse(focus1, focus2, cost);
+        Ellipse ellipse = new Ellipse(focus1, focus2, cost);
 
         // If we don't have a CAS yet
         // Fetch arcs from the graph using spatial indices
         if(cas == null) {
-            cas = getAllArcs(ellipse);
+            // Since s is one of the foci of our ellipse, it will always be contained in it.
+            // Use s as the node which we start our search
+            cas = getAllArcs(ellipse, s);
         }
 
         logger.debug("Starting to compute CAS! num arcs: " + cas.size() + " cost: " + cost);
@@ -214,22 +211,13 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     /**
      * Fetches all Arcs from the graph which are contained inside of the specified Shape.
      *
-     * @param shape Shape.
+     * @param shape     Shape.
+     * @param startNode Node to start search from.
      * @return Arc list.
      */
-    private List<Arc> getAllArcs(final Shape shape) {
+    private List<Arc> getAllArcs(final Ellipse shape, int startNode) {
         logger.debug("Fetching arcs from graph!");
         final List<Arc> arcs = new ArrayList<>();
-
-        GHPoint center = shape.getCenter();
-        QueryResult qr = locationIndex.findClosest(center.getLat(), center.getLon(), edgeFilter);
-        // TODO: if there is no street close to the center it'll fail although there are roads covered. Maybe we should check edge points or some random points in the Shape instead?
-        if(!qr.isValid())
-            throw new IllegalArgumentException("Shape " + shape + " does not cover graph");
-
-        if(shape.contains(qr.getSnappedPoint().lat, qr.getSnappedPoint().lon)) {
-            arcs.add(getArc(qr.getClosestEdge()));
-        }
 
         BreadthFirstSearch bfs = new BreadthFirstSearch() {
             final Shape localShape = shape;
@@ -255,7 +243,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         };
 
 
-        bfs.start(baseGraph.createEdgeExplorer(edgeFilter), qr.getClosestNode());
+        bfs.start(baseGraph.createEdgeExplorer(edgeFilter), startNode);
 
         logger.debug("Got all arcs inside of ellipse! num: " + arcs.size());
 
