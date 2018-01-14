@@ -5,7 +5,6 @@ import com.graphhopper.routing.AbstractRoutingAlgorithm;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.RoutingAlgorithm;
 import com.graphhopper.routing.ch.PrepareContractionHierarchies;
-import com.graphhopper.routing.util.DefaultEdgeFilter;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.weighting.Weighting;
@@ -40,13 +39,11 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     private final int MAX_ITERATIONS;
     private final long SEED;
 
-    private Graph baseGraph;
+    private Graph CHGraph; // Graph used for CH Dijkstra search
     private EdgeFilter levelEdgeFilter; // Used for CH Dijkstra search
-    private EdgeFilter edgeFilter; // Determines which edges are considered in CAS
     private Weighting scoreWeighting; // Used for scoring arcs
-    private Random random;
     private int s, d; // Start and End Node IDs
-
+    private Random random;
 
     private boolean isFinished = false;
 
@@ -60,11 +57,10 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
      */
     public IteratedLocalSearch(Graph graph, Weighting weighting,
                                EdgeFilter levelEdgeFilter, PMap params) {
-        super(graph, weighting, TraversalMode.EDGE_BASED_1DIR);
+        super(graph.getBaseGraph(), weighting, TraversalMode.EDGE_BASED_1DIR);
 
-        baseGraph = graph.getBaseGraph();
+        CHGraph = graph;
         this.levelEdgeFilter = levelEdgeFilter;
-        edgeFilter = new DefaultEdgeFilter(flagEncoder);
         scoreWeighting = new BikePriorityWeighting(flagEncoder);
 
         MAX_COST = params.getDouble(MAX_DIST, DEFAULT_MAX_DIST);
@@ -97,7 +93,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     private Path runILS() {
         Route solution;
         if(shortestPath(s, d).getDistance() > MAX_COST) {
-            solution = Route.newRoute(this, baseGraph, weighting, scoreWeighting, s, d, MAX_COST);
+            solution = Route.newRoute(this, graph, weighting, scoreWeighting, s, d, MAX_COST);
         } else {
             solution = initializeSolution();
 
@@ -146,7 +142,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
      * @return Route.
      */
     private Route initializeSolution() {
-        Route route = Route.newRoute(this, baseGraph, weighting, scoreWeighting, s, d, MAX_COST);
+        Route route = Route.newRoute(this, graph, weighting, scoreWeighting, s, d, MAX_COST);
         // Add fake edge to start solution
         Arc arc = new Arc(Arc.FAKE_ARC_ID, s, d, MAX_COST, 0, PointList.EMPTY);
         computeCAS(arc, null, s, d, MAX_COST);
@@ -243,7 +239,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         };
 
 
-        bfs.start(baseGraph.createEdgeExplorer(edgeFilter), startNode);
+        bfs.start(outEdgeExplorer, startNode);
 
         logger.debug("Got all arcs inside of ellipse! num: " + arcs.size());
 
@@ -355,7 +351,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
      */
     private Route generatePath(int s, int d, double dist, double minProfit, List<Arc> cas) {
         logger.debug("Generating path! dist: " + dist + " minProfit: " + minProfit + " cas size: " + cas.size());
-        Route route = Route.newRoute(this, baseGraph, weighting, scoreWeighting, s, d, dist);
+        Route route = Route.newRoute(this, graph, weighting, scoreWeighting, s, d, dist);
 
         List<Arc> arcs = getCandidateArcsByQR(cas);
         while(!arcs.isEmpty() && route.getCost() < dist) {
@@ -367,7 +363,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         if(route.getScore() > minProfit) {
             return route;
         } else {
-            return Route.newRoute(this, baseGraph, weighting, scoreWeighting, s, d, dist);
+            return Route.newRoute(this, graph, weighting, scoreWeighting, s, d, dist);
         }
 
     }
@@ -381,7 +377,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     @Override
     public Path shortestPath(int s, int d) {
         RoutingAlgorithm search =
-                new PrepareContractionHierarchies.DijkstraBidirectionCH(graph,
+                new PrepareContractionHierarchies.DijkstraBidirectionCH(CHGraph,
                         weighting, TraversalMode.NODE_BASED)
                         .setEdgeFilter(levelEdgeFilter);
 
