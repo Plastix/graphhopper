@@ -373,7 +373,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         while(!arcs.isEmpty() && route.getCost() < dist) {
             int randomIndex = random.nextInt(arcs.size());
             Arc e = arcs.remove(randomIndex);
-            route.insertArcAtMinPathSegment(e, dist);
+            route.insertArcAtMinPathSegment(e);
         }
 
         if(route.getScore() > minProfit) {
