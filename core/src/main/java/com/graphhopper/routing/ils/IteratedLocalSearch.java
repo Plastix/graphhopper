@@ -4,7 +4,6 @@ import com.graphhopper.routing.AbstractRoutingAlgorithm;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.RoutingAlgorithm;
 import com.graphhopper.routing.ch.PrepareContractionHierarchies;
-import com.graphhopper.routing.util.DefaultEdgeFilter;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.weighting.Weighting;
@@ -27,10 +26,9 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm {
     private final int MAX_DEPTH;
     private final int MAX_ITERATIONS;
 
+    private Graph CHGraph; // CH Dijkstra search
     private EdgeFilter levelEdgeFilter; // Used for CH Dijkstra search
-    private EdgeFilter bikeEdgeFilter;
-    private Weighting bikePriorityWeighting;
-    private Graph baseGraph;
+    private Weighting scoreWeighting;
 
     private boolean isFinished = false;
     private int s, d;
@@ -40,12 +38,11 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm {
      */
     public IteratedLocalSearch(Graph graph, Weighting weighting,
                                EdgeFilter levelEdgeFilter, PMap params) {
-        super(graph, weighting, TraversalMode.EDGE_BASED_1DIR);
+        super(graph.getBaseGraph(), weighting, TraversalMode.EDGE_BASED_1DIR);
 
-        baseGraph = graph.getBaseGraph();
+        CHGraph = graph;
         this.levelEdgeFilter = levelEdgeFilter;
-        bikeEdgeFilter = new DefaultEdgeFilter(flagEncoder);
-        bikePriorityWeighting = new BikePriorityWeighting(flagEncoder);
+        scoreWeighting = new BikePriorityWeighting(flagEncoder);
 
         MAX_COST = params.getDouble(MAX_DIST, DEFAULT_MAX_DIST);
         MIN_COST = params.getDouble(MIN_DIST, DEFAULT_MIN_DIST);
@@ -65,7 +62,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm {
         Route solution = initialize();
         solution = improve(solution);
         isFinished = true;
-        return solution.getPath(baseGraph, weighting, s, d);
+        return solution.getPath(graph, weighting, scoreWeighting, s, d);
     }
 
     private Route improve(Route solution) {
@@ -135,8 +132,8 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm {
             return false;
         }
 
-        // Make sure to use baseGraph for traversal (non-CH version)
-        EdgeExplorer explorer = baseGraph.createEdgeExplorer(bikeEdgeFilter);
+        // Using edgeExplorer from baseGraph for traversal (non-CH version)
+        EdgeExplorer explorer = outEdgeExplorer;
         EdgeIterator edgeIterator = explorer.setBaseNode(s);
 
         while(edgeIterator.next()) {
@@ -156,7 +153,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm {
                 continue;
             }
 
-            double edgeScore = bikePriorityWeighting
+            double edgeScore = scoreWeighting
                     .calcWeight(edgeIterator, false, nextNode);
 
             route.addEdge(currentEdge, s, nextNode, edgeCost, edgeScore);
@@ -181,7 +178,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm {
      */
     private double shortestPath(int s, int d) {
         RoutingAlgorithm search =
-                new PrepareContractionHierarchies.DijkstraBidirectionCH(graph,
+                new PrepareContractionHierarchies.DijkstraBidirectionCH(CHGraph,
                         weighting, TraversalMode.NODE_BASED)
                         .setEdgeFilter(levelEdgeFilter);
 

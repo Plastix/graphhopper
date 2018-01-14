@@ -1,7 +1,6 @@
 package com.graphhopper.routing.ils;
 
 import com.carrotsearch.hppc.IntHashSet;
-import com.graphhopper.routing.Path;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
 
@@ -85,12 +84,12 @@ final class Route {
         edges.addAll(other.edges);
     }
 
-    Path getPath(Graph graph, Weighting weighting, int s, int d) {
-        Path path = new Path(graph, weighting);
+    IlsPath getPath(Graph graph, Weighting costWeighting, Weighting scoreWeighting, int s, int d) {
+        IlsPath path = new IlsPath(graph, costWeighting, scoreWeighting);
         for(Arc arc : arcs) {
             path.processEdge(arc.edgeId, arc.adjNode, arc.edgeId);
         }
-        return path
+        return (IlsPath) path
                 .setEndNode(d)
                 .setFromNode(s)
                 .setFound(!arcs.isEmpty());
@@ -104,7 +103,7 @@ final class Route {
         return score;
     }
 
-    public int length(){
+    public int length() {
         return arcs.size();
     }
 
