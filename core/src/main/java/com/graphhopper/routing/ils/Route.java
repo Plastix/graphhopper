@@ -32,7 +32,8 @@ final class Route implements Iterable<Arc> {
     private IntHashSet arcIds; // Hashset of Arc IDs from arcs
     private double cost, score; // Current
 
-    private Route(ShortestPathCalculator shortestPathCalculator, Graph graph, Weighting weighting, int s, int d, double maxCost) {
+    private Route(ShortestPathCalculator shortestPathCalculator, Graph graph, Weighting weighting,
+                  int s, int d, double maxCost) {
         sp = shortestPathCalculator;
         arcs = new ArrayList<>();
         blankSegments = new ArrayList<>();
@@ -63,13 +64,13 @@ final class Route implements Iterable<Arc> {
 
     /**
      * Adds the specified Arc to the Route at the specified index.
-     * Throws {@link IndexOutOfBoundsException} if index <= 0 or index > {@link Route#getNumArcs()}.
+     * Throws {@link IndexOutOfBoundsException} if index <= 0 or index > {@link Route#length()}.
      *
      * @param index Index to insert Arc.
      * @param arc   Arc to insert.
      */
     void addArc(int index, @NotNull Arc arc) {
-        int length = getNumArcs();
+        int length = length();
         if(index < 0 || index > length) {
             throw new IndexOutOfBoundsException();
         }
@@ -88,12 +89,13 @@ final class Route implements Iterable<Arc> {
      * @return Index of removed Arc. Returns -1 if Arc was not in the current Route.
      */
     int removeArc(@NotNull Arc a) {
+        // Short circuit if Arc is not present in Route
+        if(!contains(a)) {
+            return -1;
+        }
+
         int index = arcs.indexOf(a);
 
-        // Short circuit if Arc is not present in Route
-        if(index == -1) {
-            return index;
-        }
 
         // Remove two path segments surrounding Arc
         Path segment1 = blankSegments.remove(index);
@@ -102,7 +104,7 @@ final class Route implements Iterable<Arc> {
         cost -= segment2.getDistance();
 
         // If we have more than 1 arc we need to add a new path segment to join the Route
-        int length = getNumArcs();
+        int length = length();
         if(length > 1) {
             int start = s;
             int end = d;
@@ -134,13 +136,13 @@ final class Route implements Iterable<Arc> {
 
     /**
      * Adds the specified Route to the current Route at the specified index.
-     * Throws {@link IndexOutOfBoundsException} if index <= 0 or index > {@link Route#getNumArcs()}.
+     * Throws {@link IndexOutOfBoundsException} if index <= 0 or index > {@link Route#length()}.
      *
      * @param index Index to insert Route.
      * @param route Route to insert.
      */
     void insertRoute(int index, @NotNull Route route) {
-        int length = getNumArcs();
+        int length = length();
         if(index < 0 || index > length) {
             throw new IndexOutOfBoundsException();
         }
@@ -148,7 +150,7 @@ final class Route implements Iterable<Arc> {
         // Only add Route if it is non-empty
         if(!route.isEmpty()) {
             Arc first = route.arcs.get(0);
-            Arc last = route.arcs.get(route.getNumArcs() - 1);
+            Arc last = route.arcs.get(route.length() - 1);
 
             updatePathSegments(index, first, last);
 
@@ -177,7 +179,7 @@ final class Route implements Iterable<Arc> {
      * @param right Right bound of the Arc to be inserted.
      */
     private void updatePathSegments(int index, Arc left, Arc right) {
-        int length = getNumArcs();
+        int length = length();
         int start = s, end = d;
 
         int startIndex = index - 1;
@@ -265,7 +267,7 @@ final class Route implements Iterable<Arc> {
                 .setFound(!isEmpty());
     }
 
-    private int getNumArcs() {
+    private int length() {
         return arcs.size();
     }
 
@@ -275,7 +277,7 @@ final class Route implements Iterable<Arc> {
      * @return True if contains arc, else false.
      */
     boolean isEmpty() {
-        return getNumArcs() == 0;
+        return length() == 0;
     }
 
     /**
@@ -333,9 +335,12 @@ final class Route implements Iterable<Arc> {
      * @return Node ID
      */
     int getPrev(@NotNull Arc a) {
-        int index = arcs.indexOf(a);
+        if(!contains(a)) {
+            return -1;
+        }
 
-        return (index != -1 && index - 1 >= 0) ? arcs.get(index - 1).adjNode : s;
+        int index = arcs.indexOf(a);
+        return (index - 1 >= 0) ? arcs.get(index - 1).adjNode : s;
     }
 
     /**
@@ -345,9 +350,12 @@ final class Route implements Iterable<Arc> {
      * @return Node ID.
      */
     int getNext(@NotNull Arc a) {
-        int index = arcs.indexOf(a);
+        if(!contains(a)) {
+            return -1;
+        }
 
-        return (index != -1 && index + 1 <= getNumArcs() - 1) ? arcs.get(index + 1).baseNode : d;
+        int index = arcs.indexOf(a);
+        return (index + 1 <= length() - 1) ? arcs.get(index + 1).baseNode : d;
     }
 
     /**
@@ -364,15 +372,13 @@ final class Route implements Iterable<Arc> {
      * Adds the specified arc to the Route at the smallest blank path segment as long as it does not go over the
      * specified budget.
      *
-     * @param arc    Arc to insert.
-     * @param budget Budget, in meters.
+     * @param arc Arc to insert.
      */
-    void insertArcAtMinPathSegment(@NotNull Arc arc, double budget) {
-        int pathIndex = -1;
-        double minPathValue = Double.MAX_VALUE;
-
+    void insertArcAtMinPathSegment(@NotNull Arc arc) {
+        // We have at least 1 arc and 2 blank path segments
         if(!isEmpty()) {
-            // We have at least 1 arc and 2 blank path segments
+            int pathIndex = -1;
+            double minPathValue = Double.MAX_VALUE;
             // Find smallest blank path segment
             for(int i = 0; i < blankSegments.size(); i++) {
                 double value = blankSegments.get(i).getDistance();
@@ -383,14 +389,14 @@ final class Route implements Iterable<Arc> {
             }
 
             int start = pathIndex == 0 ? s : arcs.get(pathIndex - 1).adjNode;
-            int end = pathIndex == getNumArcs() ? d : arcs.get(pathIndex).baseNode;
+            int end = pathIndex == length() ? d : arcs.get(pathIndex).baseNode;
 
             if(sp.getPathCost(start, end, arc) <=
-                    budget - getCost() + minPathValue) {
+                    getRemainingCost() + minPathValue) {
                 addArc(pathIndex, arc);
             }
 
-        } else if(sp.getPathCost(s, d, arc) <= budget) {
+        } else if(sp.getPathCost(s, d, arc) <= getRemainingCost()) {
             addArc(0, arc);
         }
     }
