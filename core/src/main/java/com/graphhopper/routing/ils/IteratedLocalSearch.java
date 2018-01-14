@@ -311,8 +311,13 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         }
 
         value += arc.score;
+        value /= (sp1.getDistance() + arc.cost + sp2.getDistance());
 
-        arc.qualityRatio = value / (sp1.getDistance() + arc.cost + sp2.getDistance());
+        if(Double.isNaN(value)) {
+            value = 0;
+        }
+        
+        arc.qualityRatio = value;
     }
 
     /**

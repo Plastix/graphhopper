@@ -325,7 +325,11 @@ final class Route implements Iterable<Arc> {
         double result = score / (maxDist - dist);
 
         // Hacky fix for NaN values
-        arc.improvePotential = Double.isNaN(result) ? 0 : result;
+        if(Double.isNaN(result) || result < 0) {
+            result = 0;
+        }
+
+        arc.improvePotential = result;
     }
 
     /**
