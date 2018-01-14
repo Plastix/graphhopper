@@ -100,31 +100,35 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
             logger.info("Seed: " + SEED);
             for(int i = 0; i < MAX_ITERATIONS; i++) {
                 logger.debug("Iteration " + i);
-                List<Arc> arcs = solution.getCandidateArcsByIP();
-                logger.debug("Possible arcs to remove from solution: " + arcs.size());
+                List<Arc> arcRemovalPool = solution.getCandidateArcsByIP();
+                logger.debug("Possible arcs to remove from solution: " + arcRemovalPool.size());
 
-                int randomIndex = random.nextInt(arcs.size());
-                Arc e = arcs.remove(randomIndex);
+                int randomIndex = random.nextInt(arcRemovalPool.size());
+                Arc arcToRemove = arcRemovalPool.remove(randomIndex);
+                List<Arc> inheritedCas = arcToRemove.getCas();
 
-                double b1 = solution.getRemainingCost() + e.cost; // Remaining budget after removing e from solution
-
-                Route path = generatePath(solution.getPrev(e), solution.getNext(e), b1, e.score, e.getCas());
+                // Remaining budget after removing "arcToRemove" from solution
+                double pathBudget = solution.getRemainingCost() + arcToRemove.cost;
+                Route path = generatePath(solution.getPrev(arcToRemove), solution.getNext(arcToRemove),
+                        pathBudget, arcToRemove.score, inheritedCas);
 
                 if(!path.isEmpty()) {
                     logger.debug("Found path with with dist " + path.getCost());
-                    int index = solution.removeArc(e);
+                    int index = solution.removeArc(arcToRemove);
                     solution.insertRoute(index, path);
                     for(Arc arc : solution) {
-                        double b2 = solution.getRemainingCost() + arc.cost; // Remaining budget after removing arc from solution
+                        // Remaining budget after removing "arc" from solution
+                        double newBudget = solution.getRemainingCost() + arc.cost;
 
                         int startCAS = solution.getPrev(arc);
                         int endCAS = solution.getNext(arc);
 
                         if(path.contains(arc) || arc.adjNode == startCAS || arc.baseNode == endCAS) {
                             // Using removed arc's CAS to compute next CAS (inherit)
-                            computeCAS(arc, e.getCas(), startCAS, endCAS, b2);
+                            computeCAS(arc, inheritedCas, startCAS, endCAS, newBudget);
                         } else {
-                            updateCAS(arc, startCAS, endCAS, b1, b2);
+                            double oldBudget = solution.getRemainingCost() + arcToRemove.cost;
+                            updateCAS(arc, inheritedCas, startCAS, endCAS, newBudget, oldBudget);
                         }
                     }
                 }
@@ -273,18 +277,17 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
      * @param newBudget New allowable budget.
      * @param oldBudget Old allowable budget.
      */
-    private void updateCAS(@NotNull Arc arc, int s, int d, double newBudget, double oldBudget) {
+    private void updateCAS(@NotNull Arc arc, @NotNull List<Arc> cas, int s, int d, double newBudget, double oldBudget) {
         // Restrict CAS using inherit property
         if(newBudget < oldBudget) {
-            List<Arc> cas = arc.getCas();
-            for(int i = 0; i < cas.size(); i++) {
-                Arc e = cas.get(i);
+            List<Arc> newCas = new ArrayList<>();
+            for(Arc e : cas) {
                 // Remove any arc whose path is too big
-                if(getPathCost(s, d, e) > newBudget) {
-                    cas.remove(i);
+                if(getPathCost(s, d, e) <= newBudget) {
+                    newCas.add(e);
                 }
             }
-            arc.setCas(cas);
+            arc.setCas(newCas);
         } else if(newBudget > oldBudget) {
             computeCAS(arc, null, s, d, newBudget);
         }
@@ -316,7 +319,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         if(Double.isNaN(value)) {
             value = 0;
         }
-        
+
         arc.qualityRatio = value;
     }
 
