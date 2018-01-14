@@ -1,6 +1,5 @@
 package com.graphhopper.routing.ils;
 
-import com.carrotsearch.hppc.IntHashSet;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
@@ -30,7 +29,6 @@ final class Route implements Iterable<Arc> {
 
     private List<Arc> arcs; // List of "attractive arcs" in the Route
     private List<Path> blankSegments; // List of shortest paths connecting non-contiguous attractive arcs.
-    private IntHashSet arcIds; // HashSet of Arc IDs from arcs
     private double cost, score; // Current
 
     private Route(ShortestPathCalculator shortestPathCalculator, Graph graph, Weighting timeWeighting,
@@ -45,7 +43,6 @@ final class Route implements Iterable<Arc> {
         this.graph = graph;
         this.timeWeighting = timeWeighting;
         this.scoreWeighting = scoreWeighting;
-        arcIds = new IntHashSet();
         MAX_COST = maxCost;
     }
 
@@ -76,14 +73,13 @@ final class Route implements Iterable<Arc> {
     void addArc(int index, @NotNull Arc arc) {
         int length = length();
         if(index < 0 || index > length) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException(String.format("index %d, length %d", index, length));
         }
 
         updatePathSegments(index, arc, arc);
         arcs.add(index, arc);
         cost += arc.cost;
         score += arc.score;
-        arcIds.add(arc.edgeId);
     }
 
     /**
@@ -93,13 +89,12 @@ final class Route implements Iterable<Arc> {
      * @return Index of removed Arc. Returns -1 if Arc was not in the current Route.
      */
     int removeArc(@NotNull Arc a) {
-        // Short circuit if Arc is not present in Route
-        if(!contains(a)) {
-            return -1;
-        }
-
         int index = arcs.indexOf(a);
 
+        // Short circuit if Arc is not present in Route
+        if(index == -1) {
+            throw new IllegalArgumentException("Arc is not in route!");
+        }
 
         // Remove two path segments surrounding Arc
         Path segment1 = blankSegments.remove(index);
@@ -133,7 +128,6 @@ final class Route implements Iterable<Arc> {
         arcs.remove(index);
         cost -= a.cost;
         score -= a.score;
-        arcIds.remove(a.edgeId);
 
         return index;
     }
@@ -148,7 +142,7 @@ final class Route implements Iterable<Arc> {
     void insertRoute(int index, @NotNull Route route) {
         int length = length();
         if(index < 0 || index > length) {
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException(String.format("index %d, length %d", index, length));
         }
 
         // Only add Route if it is non-empty
@@ -169,7 +163,6 @@ final class Route implements Iterable<Arc> {
             cost += route.cost;
             arcs.addAll(index, route.arcs);
             blankSegments.addAll(index + 1, route.blankSegments);
-            arcIds.addAll(route.arcIds);
         }
     }
 
@@ -248,7 +241,7 @@ final class Route implements Iterable<Arc> {
         IlsPath path = new IlsPath(graph, timeWeighting, scoreWeighting);
 
         // If we have a fake arc return no path
-        if(arcIds.contains(Arc.FAKE_ARC_ID)) {
+        if(contains(new Arc(Arc.FAKE_ARC_ID, s, d, 0, 0, null))) {
             path.setFound(false);
             return path;
         }
@@ -343,7 +336,7 @@ final class Route implements Iterable<Arc> {
      */
     int getPrev(@NotNull Arc a) {
         if(!contains(a)) {
-            return s;
+            throw new IllegalArgumentException("Arc is not in route!");
         }
 
         int index = arcs.indexOf(a);
@@ -358,7 +351,7 @@ final class Route implements Iterable<Arc> {
      */
     int getNext(@NotNull Arc a) {
         if(!contains(a)) {
-            return d;
+            throw new IllegalArgumentException("Arc is not in route!");
         }
 
         int index = arcs.indexOf(a);
@@ -372,7 +365,7 @@ final class Route implements Iterable<Arc> {
      * @return True if arc is in Route, else false.
      */
     boolean contains(@NotNull Arc a) {
-        return arcIds.contains(a.edgeId);
+        return arcs.contains(a);
     }
 
     /**
