@@ -22,18 +22,19 @@ final class Route implements Iterable<Arc> {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private Graph graph;
-    private Weighting weighting;
+    private Weighting timeWeighting;
+    private Weighting scoreWeighting;
     private ShortestPathCalculator sp;
     private final int s, d; // Start & End Node IDs
     private final double MAX_COST;
 
     private List<Arc> arcs; // List of "attractive arcs" in the Route
     private List<Path> blankSegments; // List of shortest paths connecting non-contiguous attractive arcs.
-    private IntHashSet arcIds; // Hashset of Arc IDs from arcs
+    private IntHashSet arcIds; // HashSet of Arc IDs from arcs
     private double cost, score; // Current
 
-    private Route(ShortestPathCalculator shortestPathCalculator, Graph graph, Weighting weighting,
-                  int s, int d, double maxCost) {
+    private Route(ShortestPathCalculator shortestPathCalculator, Graph graph, Weighting timeWeighting,
+                  Weighting scoreWeighting, int s, int d, double maxCost) {
         sp = shortestPathCalculator;
         arcs = new ArrayList<>();
         blankSegments = new ArrayList<>();
@@ -42,7 +43,8 @@ final class Route implements Iterable<Arc> {
         this.s = s;
         this.d = d;
         this.graph = graph;
-        this.weighting = weighting;
+        this.timeWeighting = timeWeighting;
+        this.scoreWeighting = scoreWeighting;
         arcIds = new IntHashSet();
         MAX_COST = maxCost;
     }
@@ -50,16 +52,18 @@ final class Route implements Iterable<Arc> {
     /**
      * Static factory method for creating a new Route instance.
      *
-     * @param sp        Interface which can calculate Shortest Paths.
-     * @param graph     Graph.
-     * @param weighting Weighting used to calculate distance of final path.
-     * @param s         Start Node ID.
-     * @param d         End Node ID.
+     * @param sp             Interface which can calculate Shortest Paths.
+     * @param graph          Graph.
+     * @param weighting      Weighting used to calculate distance of added arcs.
+     * @param scoreWeighting Weighting used to calculate score of added arcs.
+     * @param s              Start Node ID.
+     * @param d              End Node ID.
      * @return New Route Instance.
      */
     static Route newRoute(@NotNull ShortestPathCalculator sp, @NotNull Graph graph,
-                          @NotNull Weighting weighting, int s, int d, double maxCost) {
-        return new Route(sp, graph, weighting, s, d, maxCost);
+                          @NotNull Weighting weighting, @NotNull Weighting scoreWeighting,
+                          int s, int d, double maxCost) {
+        return new Route(sp, graph, weighting, scoreWeighting, s, d, maxCost);
     }
 
     /**
@@ -240,13 +244,13 @@ final class Route implements Iterable<Arc> {
      *
      * @return Fully connected Path object
      */
-    Path getPath() {
-        logger.debug("Route cost: " + getCost());
-        Path path = new Path(graph, weighting);
+    IlsPath getPath() {
+        IlsPath path = new IlsPath(graph, timeWeighting, scoreWeighting);
 
         // If we have a fake arc return no path
         if(arcIds.contains(Arc.FAKE_ARC_ID)) {
-            return path.setFound(false);
+            path.setFound(false);
+            return path;
         }
 
         for(int i = 0; i < blankSegments.size(); i++) {
@@ -261,10 +265,13 @@ final class Route implements Iterable<Arc> {
             }
         }
 
-        return path
-                .setEndNode(d)
+        path.setEndNode(d)
                 .setFromNode(s)
                 .setFound(!isEmpty());
+
+        logger.debug("Route dist: " + path.getDistance() + " Route score: " + path.getScore());
+
+        return path;
     }
 
     private int length() {
