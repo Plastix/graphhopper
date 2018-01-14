@@ -50,23 +50,7 @@ class Ellipse implements Shape {
 
     @Override
     public GHPoint getCenter() {
-        GHPoint point = new GHPoint();
-
-        double dLon = Math.toRadians(focus2.lon - focus1.lon);
-
-        //convert to radians
-        double lat1 = Math.toRadians(focus1.lat);
-        double lat2 = Math.toRadians(focus2.lat);
-        double lon1 = Math.toRadians(focus1.lon);
-
-        double Bx = Math.cos(lat2) * Math.cos(dLon);
-        double By = Math.cos(lat2) * Math.sin(dLon);
-        double lat3 = Math.atan2(Math.sin(lat1) + Math.sin(lat2), Math.sqrt((Math.cos(lat1) + Bx) * (Math.cos(lat1) + Bx) + By * By));
-        double lon3 = lon1 + Math.atan2(By, Math.cos(lat1) + Bx);
-
-        point.lat = Math.toDegrees(lat3);
-        point.lon = Math.toDegrees(lon3);
-        return point;
+        throw new NotImplementedException();
     }
 
 
