@@ -2,6 +2,7 @@ package com.graphhopper.routing.ils;
 
 import com.carrotsearch.hppc.IntHashSet;
 import com.graphhopper.routing.AbstractRoutingAlgorithm;
+import com.graphhopper.routing.DijkstraBidirectionCH;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.RoutingAlgorithm;
 import com.graphhopper.routing.ch.PrepareContractionHierarchies;
@@ -385,7 +386,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     @Override
     public Path shortestPath(int s, int d) {
         RoutingAlgorithm search =
-                new PrepareContractionHierarchies.DijkstraBidirectionCH(CHGraph,
+                new DijkstraBidirectionCH(CHGraph,
                         weighting, TraversalMode.NODE_BASED)
                         .setEdgeFilter(levelEdgeFilter);
 
