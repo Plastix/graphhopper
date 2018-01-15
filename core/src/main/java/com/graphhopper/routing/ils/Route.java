@@ -1,5 +1,6 @@
 package com.graphhopper.routing.ils;
 
+import com.carrotsearch.hppc.IntHashSet;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
@@ -28,7 +29,7 @@ final class Route implements Iterable<Arc> {
     private final double MAX_COST;
 
     private List<Arc> arcs; // List of "attractive arcs" in the Route
-    private List<Path> blankSegments; // List of shortest paths connecting non-contiguous attractive arcs.
+    private List<IlsPathCh> blankSegments; // List of shortest paths connecting non-contiguous attractive arcs.
     private double cost, score; // Current
 
     private Route(ShortestPathCalculator shortestPathCalculator, Graph graph, Weighting timeWeighting,
@@ -97,8 +98,8 @@ final class Route implements Iterable<Arc> {
         }
 
         // Remove two path segments surrounding Arc
-        Path segment1 = blankSegments.remove(index);
-        Path segment2 = blankSegments.remove(index);
+        IlsPathCh segment1 = blankSegments.remove(index);
+        IlsPathCh segment2 = blankSegments.remove(index);
         cost -= segment1.getDistance();
         cost -= segment2.getDistance();
 
@@ -120,7 +121,7 @@ final class Route implements Iterable<Arc> {
             }
 
             // Calculate and add new path segment
-            Path segment = sp.shortestPath(start, end);
+            IlsPathCh segment = sp.shortestPath(start, end, getArcIdSet());
             blankSegments.add(index, segment);
             cost += segment.getDistance();
         }
@@ -154,8 +155,8 @@ final class Route implements Iterable<Arc> {
 
             // We need to remove the inserted routes starting and ending path segments
             // We recalculate the new path segments below
-            Path head = route.blankSegments.remove(0);
-            Path tail = route.blankSegments.remove(route.blankSegments.size() - 1);
+            IlsPathCh head = route.blankSegments.remove(0);
+            IlsPathCh tail = route.blankSegments.remove(route.blankSegments.size() - 1);
             route.cost -= head.getDistance();
             route.cost -= tail.getDistance();
 
@@ -188,15 +189,18 @@ final class Route implements Iterable<Arc> {
             end = arcs.get(index).baseNode;
         }
 
-        Path segment1 = sp.shortestPath(start, left.baseNode);
+        IntHashSet blacklist = getArcIdSet();
+        IlsPathCh segment1 = sp.shortestPath(start, left.baseNode, blacklist);
         cost += segment1.getDistance();
 
-        Path segment2 = sp.shortestPath(right.adjNode, end);
+        blacklist.addAll(segment1.getEdges());
+        blacklist.addAll(left.edgeId, right.edgeId);
+        IlsPathCh segment2 = sp.shortestPath(right.adjNode, end, blacklist);
         cost += segment2.getDistance();
 
         // If non-empty, remove the previous blank path segment before inserting the two new ones
         if(length > 0) {
-            Path removed = blankSegments.remove(index);
+            IlsPathCh removed = blankSegments.remove(index);
             cost -= removed.getDistance();
         }
 
@@ -315,11 +319,11 @@ final class Route implements Iterable<Arc> {
         double score = 0;
         double maxDist = 0;
 
-        double dist = sp.getPathCost(v1, v2, arc);
+        double dist = sp.getPathCost(v1, v2, arc, this);
 
         for(Arc e : arc.getCas()) {
             score += e.score - arc.score;
-            maxDist = Math.max(maxDist, sp.getPathCost(v1, v2, e));
+            maxDist = Math.max(maxDist, sp.getPathCost(v1, v2, e, this));
         }
 
         double result = score / (maxDist - dist);
@@ -395,14 +399,25 @@ final class Route implements Iterable<Arc> {
             int start = pathIndex == 0 ? s : arcs.get(pathIndex - 1).adjNode;
             int end = pathIndex == length() ? d : arcs.get(pathIndex).baseNode;
 
-            if(sp.getPathCost(start, end, arc) <=
+            if(sp.getPathCost(start, end, arc, this) <=
                     getRemainingCost() + minPathValue) {
                 addArc(pathIndex, arc);
             }
 
-        } else if(sp.getPathCost(s, d, arc) <= getRemainingCost()) {
+        } else if(sp.getPathCost(s, d, arc, this) <= getRemainingCost()) {
             addArc(0, arc);
         }
+    }
+
+    public IntHashSet getArcIdSet() {
+        IntHashSet results = new IntHashSet();
+        for(int i = 0; i < blankSegments.size(); i++) {
+            results.addAll(blankSegments.get(i).getEdges());
+            if(i < arcs.size()) {
+                results.add(arcs.get(i).edgeId);
+            }
+        }
+        return results;
     }
 
     @Override

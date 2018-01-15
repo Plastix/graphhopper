@@ -2,10 +2,8 @@ package com.graphhopper.routing.ils;
 
 import com.carrotsearch.hppc.IntHashSet;
 import com.graphhopper.routing.AbstractRoutingAlgorithm;
-import com.graphhopper.routing.DijkstraBidirectionCH;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.RoutingAlgorithm;
-import com.graphhopper.routing.ch.PrepareContractionHierarchies;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.weighting.Weighting;
@@ -93,7 +91,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
      */
     private Path runILS() {
         Route solution;
-        if(shortestPath(s, d).getDistance() > MAX_COST) {
+        if(shortestPath(s, d, null).getDistance() > MAX_COST) {
             solution = Route.newRoute(this, graph, weighting, scoreWeighting, s, d, MAX_COST);
         } else {
             solution = initializeSolution();
@@ -126,10 +124,10 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
                         if(path.contains(arc) || arc.adjNode == startCAS || arc.baseNode == endCAS) {
                             // Using removed arc's CAS to compute next CAS (inherit)
-                            computeCAS(arc, inheritedCas, startCAS, endCAS, newBudget);
+                            computeCAS(arc, inheritedCas, startCAS, endCAS, newBudget, solution);
                         } else {
                             double oldBudget = solution.getRemainingCost() + arcToRemove.cost;
-                            updateCAS(arc, inheritedCas, startCAS, endCAS, newBudget, oldBudget);
+                            updateCAS(arc, inheritedCas, startCAS, endCAS, newBudget, oldBudget, solution);
                         }
                     }
                 }
@@ -150,7 +148,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         Route route = Route.newRoute(this, graph, weighting, scoreWeighting, s, d, MAX_COST);
         // Add fake edge to start solution
         Arc arc = new Arc(Arc.FAKE_ARC_ID, s, d, MAX_COST, 0, PointList.EMPTY);
-        computeCAS(arc, null, s, d, MAX_COST);
+        computeCAS(arc, null, s, d, MAX_COST, route);
         route.addArc(0, arc);
 
         return route;
@@ -165,7 +163,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
      * @param d    End Node Id.
      * @param cost Cost allowance.
      */
-    private void computeCAS(Arc arc, @Nullable List<Arc> cas, int s, int d, double cost) {
+    private void computeCAS(Arc arc, @Nullable List<Arc> cas, int s, int d, double cost, Route route) {
         List<Arc> result = new ArrayList<>();
 
         GHPoint focus1 = new GHPoint(nodeAccess.getLatitude(s), nodeAccess.getLongitude(s));
@@ -198,7 +196,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
             }
 
             // Check arc feasibility
-            if(getPathCost(s, d, e) <= cost) {
+            if(getPathCost(s, d, e, route) <= cost) {
                 calcQualityRatio(e, s, d);
                 result.add(e);
             }
@@ -278,19 +276,20 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
      * @param newBudget New allowable budget.
      * @param oldBudget Old allowable budget.
      */
-    private void updateCAS(@NotNull Arc arc, @NotNull List<Arc> cas, int s, int d, double newBudget, double oldBudget) {
+    private void updateCAS(@NotNull Arc arc, @NotNull List<Arc> cas, int s, int d, double newBudget,
+                           double oldBudget, Route route) {
         // Restrict CAS using inherit property
         if(newBudget < oldBudget) {
             List<Arc> newCas = new ArrayList<>();
             for(Arc e : cas) {
                 // Remove any arc whose path is too big
-                if(getPathCost(s, d, e) <= newBudget) {
+                if(getPathCost(s, d, e, route) <= newBudget) {
                     newCas.add(e);
                 }
             }
             arc.setCas(newCas);
         } else if(newBudget > oldBudget) {
-            computeCAS(arc, null, s, d, newBudget);
+            computeCAS(arc, null, s, d, newBudget, route);
         }
     }
 
@@ -302,8 +301,8 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
      * @param d   End Node ID.
      */
     private void calcQualityRatio(@NotNull Arc arc, int s, int d) {
-        Path sp1 = shortestPath(s, arc.baseNode);
-        Path sp2 = shortestPath(arc.adjNode, d);
+        IlsPathCh sp1 = shortestPath(s, arc.baseNode, null);
+        IlsPathCh sp2 = shortestPath(arc.adjNode, d, sp1.getEdges());
 
         double value = 0;
 
@@ -378,19 +377,33 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     }
 
     @Override
-    public double getPathCost(int s, int d, @NotNull Arc arc) {
-        return shortestPath(s, arc.baseNode).getDistance() + arc.cost +
-                shortestPath(arc.adjNode, d).getDistance();
+    public double getPathCost(int s, int d, @NotNull Arc arc, Route route) {
+        IntHashSet blacklist = route.getArcIdSet();
+        IlsPathCh path1 = shortestPath(s, arc.baseNode, blacklist);
+        blacklist.addAll(path1.getEdges());
+        blacklist.add(arc.edgeId);
+        IlsPathCh path2 = shortestPath(arc.adjNode, d, blacklist);
+
+        if(path1.isFound() && path2.isFound()) {
+            return path1.getDistance() + arc.cost + path2.getDistance();
+        } else {
+            return Double.MAX_VALUE;
+        }
     }
 
     @Override
-    public Path shortestPath(int s, int d) {
-        RoutingAlgorithm search =
-                new DijkstraBidirectionCH(CHGraph,
-                        weighting, TraversalMode.NODE_BASED)
-                        .setEdgeFilter(levelEdgeFilter);
+    public IlsPathCh shortestPath(int s, int d, @Nullable IntHashSet blacklist) {
+        EdgeFilter edgeFilter = levelEdgeFilter;
+        if(blacklist != null) {
+            edgeFilter = new BlacklistEdgeFilter(levelEdgeFilter, blacklist);
+        }
 
-        return search.calcPath(s, d);
+        RoutingAlgorithm search =
+                new IlsDijkstraSearch(CHGraph,
+                        weighting, TraversalMode.NODE_BASED)
+                        .setEdgeFilter(edgeFilter);
+
+        return (IlsPathCh) search.calcPath(s, d);
     }
 
     // Unused

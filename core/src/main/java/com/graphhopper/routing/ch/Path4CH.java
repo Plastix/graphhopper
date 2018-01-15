@@ -39,7 +39,7 @@ public class Path4CH extends PathBidirRef {
     }
 
     @Override
-    public final void processEdge(int tmpEdge, int endNode, int prevEdgeId) {
+    public void processEdge(int tmpEdge, int endNode, int prevEdgeId) {
         // Shortcuts do only contain valid weight so first expand before adding
         // to distance and time
         expandEdge((CHEdgeIteratorState) routingGraph.getEdgeIteratorState(tmpEdge, endNode), false);
