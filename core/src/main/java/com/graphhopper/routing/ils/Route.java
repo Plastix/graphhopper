@@ -121,7 +121,9 @@ final class Route implements Iterable<Arc> {
             }
 
             // Calculate and add new path segment
-            IlsPathCh segment = sp.shortestPath(start, end, getArcIdSet());
+            IntHashSet blacklist = getArcIdSet();
+            blacklist.remove(arcs.get(index).edgeId;
+            IlsPathCh segment = sp.shortestPath(start, end, blacklist);
             blankSegments.add(index, segment);
             cost += segment.getDistance();
         }
@@ -190,11 +192,11 @@ final class Route implements Iterable<Arc> {
         }
 
         IntHashSet blacklist = getArcIdSet();
+        blacklist.addAll(left.edgeId, right.edgeId);
         IlsPathCh segment1 = sp.shortestPath(start, left.baseNode, blacklist);
         cost += segment1.getDistance();
 
         blacklist.addAll(segment1.getEdges());
-        blacklist.addAll(left.edgeId, right.edgeId);
         IlsPathCh segment2 = sp.shortestPath(right.adjNode, end, blacklist);
         cost += segment2.getDistance();
 

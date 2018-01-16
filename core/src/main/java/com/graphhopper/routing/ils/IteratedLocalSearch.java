@@ -301,8 +301,11 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
      * @param d   End Node ID.
      */
     private void calcQualityRatio(@NotNull Arc arc, int s, int d) {
-        IlsPathCh sp1 = shortestPath(s, arc.baseNode, null);
-        IlsPathCh sp2 = shortestPath(arc.adjNode, d, sp1.getEdges());
+        IntHashSet blacklist = new IntHashSet();
+        blacklist.add(arc.edgeId);
+        IlsPathCh sp1 = shortestPath(s, arc.baseNode, blacklist);
+        blacklist.addAll(sp1.getEdges());
+        IlsPathCh sp2 = shortestPath(arc.adjNode, d, blacklist);
 
         double value = 0;
 
@@ -379,9 +382,9 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     @Override
     public double getPathCost(int s, int d, @NotNull Arc arc, Route route) {
         IntHashSet blacklist = route.getArcIdSet();
+        blacklist.add(arc.edgeId);
         IlsPathCh path1 = shortestPath(s, arc.baseNode, blacklist);
         blacklist.addAll(path1.getEdges());
-        blacklist.add(arc.edgeId);
         IlsPathCh path2 = shortestPath(arc.adjNode, d, blacklist);
 
         if(path1.isFound() && path2.isFound()) {
