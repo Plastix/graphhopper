@@ -5,7 +5,6 @@ import com.graphhopper.routing.AbstractRoutingAlgorithm;
 import com.graphhopper.routing.DijkstraBidirectionCH;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.RoutingAlgorithm;
-import com.graphhopper.routing.ch.PrepareContractionHierarchies;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.weighting.Weighting;
@@ -19,6 +18,9 @@ import com.sun.istack.internal.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -47,6 +49,9 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     private Random random;
 
     private boolean isFinished = false;
+    private double[] scores;
+    private File output;
+    private FileWriter writer;
 
     /**
      * Creates a new ILS algorithm instance.
@@ -71,6 +76,24 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         SEED = params.getLong(Parameters.Routing.SEED, System.currentTimeMillis());
 
         random = new Random(SEED);
+        scores = new double[MAX_ITERATIONS];
+        output = new File("scores_output.csv");
+
+        if(!output.exists()) {
+            try {
+                output.createNewFile();
+            } catch(IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        try {
+            writer = new FileWriter(output, true);
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+
+
     }
 
     /**
@@ -100,6 +123,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
             logger.info("Seed: " + SEED);
             for(int i = 0; i < MAX_ITERATIONS; i++) {
+                scores[i] = solution.getPath().getScore();
                 logger.debug("Iteration " + i);
                 List<Arc> arcRemovalPool = solution.getCandidateArcsByIP();
                 logger.debug("Possible arcs to remove from solution: " + arcRemovalPool.size());
@@ -137,6 +161,22 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         }
 
         isFinished = true;
+
+
+        for(int i = 0; i < scores.length; i++) {
+            try {
+                writer.append(String.format("%d,%f\n", i, scores[i]));
+            } catch(IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        try {
+            writer.close();
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+
 
         return solution.getPath();
     }
@@ -408,5 +448,10 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     @Override
     protected Path extractPath() {
         return null;
+    }
+
+    // Used purely for debug info
+    public double[] getScores() {
+        return scores;
     }
 }
