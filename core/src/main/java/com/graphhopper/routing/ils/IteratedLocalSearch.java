@@ -197,7 +197,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
             // Check arc feasibility
             if(getPathCost(s, d, e, route) <= cost) {
-                calcQualityRatio(e, s, d);
+                calcQualityRatio(e, s, d, route);
                 result.add(e);
             }
         }
@@ -300,8 +300,8 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
      * @param s   Start Node ID.
      * @param d   End Node ID.
      */
-    private void calcQualityRatio(@NotNull Arc arc, int s, int d) {
-        IntHashSet blacklist = new IntHashSet();
+    private void calcQualityRatio(@NotNull Arc arc, int s, int d, Route route) {
+        IntHashSet blacklist = route.getArcIdSet();
         blacklist.add(arc.edgeId);
         IlsPathCh sp1 = shortestPath(s, arc.baseNode, blacklist);
         blacklist.addAll(sp1.getEdges());
@@ -398,7 +398,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     public IlsPathCh shortestPath(int s, int d, @Nullable IntHashSet blacklist) {
         EdgeFilter edgeFilter = levelEdgeFilter;
         if(blacklist != null) {
-            edgeFilter = new BlacklistEdgeFilter(levelEdgeFilter, blacklist);
+            edgeFilter = new BlacklistEdgeFilter(CHGraph, levelEdgeFilter, blacklist);
         }
 
         RoutingAlgorithm search =

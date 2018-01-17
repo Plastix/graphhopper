@@ -77,7 +77,8 @@ final class Route implements Iterable<Arc> {
             throw new IndexOutOfBoundsException(String.format("index %d, length %d", index, length));
         }
 
-        updatePathSegments(index, arc, arc);
+        updatePathSegments(index, arc, arc, new IntHashSet());
+
         arcs.add(index, arc);
         cost += arc.cost;
         score += arc.score;
@@ -122,7 +123,6 @@ final class Route implements Iterable<Arc> {
 
             // Calculate and add new path segment
             IntHashSet blacklist = getArcIdSet();
-            blacklist.remove(arcs.get(index).edgeId;
             IlsPathCh segment = sp.shortestPath(start, end, blacklist);
             blankSegments.add(index, segment);
             cost += segment.getDistance();
@@ -150,17 +150,17 @@ final class Route implements Iterable<Arc> {
 
         // Only add Route if it is non-empty
         if(!route.isEmpty()) {
-            Arc first = route.arcs.get(0);
-            Arc last = route.arcs.get(route.length() - 1);
-
-            updatePathSegments(index, first, last);
-
             // We need to remove the inserted routes starting and ending path segments
             // We recalculate the new path segments below
             IlsPathCh head = route.blankSegments.remove(0);
             IlsPathCh tail = route.blankSegments.remove(route.blankSegments.size() - 1);
             route.cost -= head.getDistance();
             route.cost -= tail.getDistance();
+
+            Arc first = route.arcs.get(0);
+            Arc last = route.arcs.get(route.length() - 1);
+
+            updatePathSegments(index, first, last, route.getArcIdSet());
 
             score += route.score;
             cost += route.cost;
@@ -178,7 +178,7 @@ final class Route implements Iterable<Arc> {
      * @param left  Left bound of the Arc to be inserted.
      * @param right Right bound of the Arc to be inserted.
      */
-    private void updatePathSegments(int index, Arc left, Arc right) {
+    private void updatePathSegments(int index, Arc left, Arc right, IntHashSet list) {
         int length = length();
         int start = s, end = d;
 
@@ -191,7 +191,14 @@ final class Route implements Iterable<Arc> {
             end = arcs.get(index).baseNode;
         }
 
+        // If non-empty, remove the previous blank path segment before inserting the two new ones
+        if(length > 0) {
+            IlsPathCh removed = blankSegments.remove(index);
+            cost -= removed.getDistance();
+        }
+
         IntHashSet blacklist = getArcIdSet();
+        blacklist.addAll(list);
         blacklist.addAll(left.edgeId, right.edgeId);
         IlsPathCh segment1 = sp.shortestPath(start, left.baseNode, blacklist);
         cost += segment1.getDistance();
@@ -199,12 +206,6 @@ final class Route implements Iterable<Arc> {
         blacklist.addAll(segment1.getEdges());
         IlsPathCh segment2 = sp.shortestPath(right.adjNode, end, blacklist);
         cost += segment2.getDistance();
-
-        // If non-empty, remove the previous blank path segment before inserting the two new ones
-        if(length > 0) {
-            IlsPathCh removed = blankSegments.remove(index);
-            cost -= removed.getDistance();
-        }
 
         blankSegments.add(index, segment2);
         blankSegments.add(index, segment1);
@@ -425,5 +426,35 @@ final class Route implements Iterable<Arc> {
     @Override
     public Iterator<Arc> iterator() {
         return arcs.iterator();
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("[");
+        builder.append(s);
+        builder.append("] -> ");
+
+        for(int i = 0; i < blankSegments.size(); i++) {
+
+            builder.append(" <");
+            for(EdgeIteratorState edgeIteratorState : blankSegments.get(i).calcEdges()) {
+                builder.append(edgeIteratorState.getEdge());
+                builder.append("->");
+            }
+
+            if(i < arcs.size()) {
+                builder.append("(");
+                builder.append(arcs.get(i).edgeId);
+                builder.append(")");
+            }
+
+            builder.append(" -> ");
+        }
+
+        builder.append(" [");
+        builder.append(d);
+        builder.append("]");
+        return builder.toString();
     }
 }

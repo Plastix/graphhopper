@@ -4,6 +4,7 @@ import com.carrotsearch.hppc.IntHashSet;
 import com.graphhopper.routing.ch.Path4CH;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
+import com.graphhopper.util.CHEdgeIteratorState;
 
 public class IlsPathCh extends Path4CH {
 
