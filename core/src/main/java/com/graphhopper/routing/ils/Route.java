@@ -437,7 +437,6 @@ final class Route implements Iterable<Arc> {
 
         for(int i = 0; i < blankSegments.size(); i++) {
 
-            builder.append(" <");
             for(EdgeIteratorState edgeIteratorState : blankSegments.get(i).calcEdges()) {
                 builder.append(edgeIteratorState.getEdge());
                 builder.append("->");

@@ -25,32 +25,28 @@ public class BlacklistEdgeFilter implements EdgeFilter {
 
     @Override
     public boolean accept(EdgeIteratorState edgeState) {
-        return !blacklist.contains(edgeState.getEdge()) && edgeFilter.accept(edgeState);
+        return !isBlacklisted(edgeState) && edgeFilter.accept(edgeState);
     }
 
-//    private boolean shortcutSkipsBlacklisted(EdgeIteratorState edgeIteratorState) {
-//        if(edgeIteratorState == null) {
-//            return false;
-//        }
-//
-//        if(edgeIteratorState instanceof CHGraphImpl.CHEdgeIteratorImpl) {
-//            CHGraphImpl.CHEdgeIteratorImpl chEdgeIterator = (CHGraphImpl.CHEdgeIteratorImpl) edgeIteratorState;
-//
-//            if(chEdgeIterator.isShortcut()) {
-//                int edge1 = chEdgeIterator.getSkippedEdge1();
-//                int edge2 = chEdgeIterator.getSkippedEdge2();
-//
-//                int to = chEdgeIterator.getAdjNode();
-//
-//                return blacklist.contains(chEdgeIterator.getEdge()) ||
-//                        shortcutSkipsBlacklisted(routingGraph.getEdgeIteratorState(edge1, to)) ||
-//                        shortcutSkipsBlacklisted(routingGraph.getEdgeIteratorState(edge2, to));
-//
-//            } else {
-//                return blacklist.contains(chEdgeIterator.getEdge());
-//            }
-//        }
-//
-//        return blacklist.contains(edgeIteratorState.getEdge());
-//    }
+    private boolean isBlacklisted(EdgeIteratorState edgeIteratorState) {
+        if(edgeIteratorState == null) {
+            return false;
+        }
+
+        if(edgeIteratorState instanceof CHGraphImpl.CHEdgeIteratorImpl) {
+            CHGraphImpl.CHEdgeIteratorImpl chEdge = (CHGraphImpl.CHEdgeIteratorImpl) edgeIteratorState;
+
+            if(chEdge.isShortcut()) {
+                int edge1 = chEdge.getSkippedEdge1();
+                int edge2 = chEdge.getSkippedEdge2();
+                int to = chEdge.getAdjNode();
+
+                return blacklist.contains(chEdge.getEdge()) ||
+                        isBlacklisted(routingGraph.getEdgeIteratorState(edge1, to)) ||
+                        isBlacklisted(routingGraph.getEdgeIteratorState(edge2, to));
+            }
+        }
+
+        return blacklist.contains(edgeIteratorState.getEdge());
+    }
 }

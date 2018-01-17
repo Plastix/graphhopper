@@ -411,7 +411,7 @@ public class CHGraphImpl implements CHGraph, Storable<CHGraph> {
         return "CHGraph|" + getWeighting().toString();
     }
 
-    class CHEdgeIteratorImpl extends EdgeIterable implements CHEdgeExplorer, CHEdgeIterator {
+    public class CHEdgeIteratorImpl extends EdgeIterable implements CHEdgeExplorer, CHEdgeIterator {
         public CHEdgeIteratorImpl(BaseGraph baseGraph, EdgeAccess edgeAccess, EdgeFilter filter) {
             super(baseGraph, edgeAccess, filter);
         }
