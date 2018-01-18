@@ -185,7 +185,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation imple
             }
             algo.setEdgeFilter(new LevelEdgeFilter(prepareGraph));
         } else if(BIKE_LOOP.equals(opts.getAlgorithm())) {
-            return new IteratedLocalSearch(graph, prepareWeighting, new LevelEdgeFilter(prepareGraph), opts.getHints());
+            return new IteratedLocalSearch(graph, weighting, opts.getHints());
         } else {
             throw new IllegalArgumentException("Algorithm " + opts.getAlgorithm() + " not supported for Contraction Hierarchies. Try with ch.disable=true");
         }

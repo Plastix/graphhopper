@@ -4,6 +4,7 @@ import com.carrotsearch.hppc.IntHashSet;
 import com.graphhopper.routing.AbstractRoutingAlgorithm;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.RoutingAlgorithm;
+import com.graphhopper.routing.util.DefaultEdgeFilter;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.weighting.Weighting;
@@ -38,8 +39,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     private final int MAX_ITERATIONS;
     private final long SEED;
 
-    private Graph CHGraph; // Graph used for CH Dijkstra search
-    private EdgeFilter levelEdgeFilter; // Used for CH Dijkstra search
+    private EdgeFilter edgeFilter;
     private Weighting scoreWeighting; // Used for scoring arcs
     private int s, d; // Start and End Node IDs
     private Random random;
@@ -48,19 +48,16 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
     /**
      * Creates a new ILS algorithm instance.
-     *
-     * @param graph           Graph to run algorithm on.
+     *  @param graph           Graph to run algorithm on.
      * @param weighting       Weighting to calculate costs.
-     * @param levelEdgeFilter Edge filter for CH shortest path computation
      * @param params          Parameters map.
      */
     public IteratedLocalSearch(Graph graph, Weighting weighting,
-                               EdgeFilter levelEdgeFilter, PMap params) {
+                               PMap params) {
         super(graph.getBaseGraph(), weighting, TraversalMode.EDGE_BASED_1DIR);
 
-        CHGraph = graph;
-        this.levelEdgeFilter = levelEdgeFilter;
         scoreWeighting = new BikePriorityWeighting(flagEncoder);
+        edgeFilter = new DefaultEdgeFilter(flagEncoder);
 
         MAX_COST = params.getDouble(MAX_DIST, DEFAULT_MAX_DIST);
         MAX_ITERATIONS = params.getInt(Parameters.Routing.MAX_ITERATIONS, DEFAULT_MAX_ITERATIONS);
@@ -396,15 +393,15 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
     @Override
     public IlsPathCh shortestPath(int s, int d, @Nullable IntHashSet blacklist) {
-        EdgeFilter edgeFilter = levelEdgeFilter;
+        EdgeFilter filter = edgeFilter;
         if(blacklist != null) {
-            edgeFilter = new BlacklistEdgeFilter(CHGraph, levelEdgeFilter, blacklist);
+            filter = new BlacklistEdgeFilter(graph, edgeFilter, blacklist);
         }
 
         RoutingAlgorithm search =
-                new IlsDijkstraSearch(CHGraph,
+                new IlsDijkstraSearch(graph,
                         weighting, TraversalMode.NODE_BASED)
-                        .setEdgeFilter(edgeFilter);
+                        .setEdgeFilter(filter);
 
         return (IlsPathCh) search.calcPath(s, d);
     }
