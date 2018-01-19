@@ -2,8 +2,10 @@ package com.graphhopper.routing.ils;
 
 import com.carrotsearch.hppc.IntHashSet;
 import com.graphhopper.routing.AbstractRoutingAlgorithm;
+import com.graphhopper.routing.DijkstraBidirectionCH;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.RoutingAlgorithm;
+import com.graphhopper.routing.ch.Path4CH;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.weighting.Weighting;
@@ -303,9 +305,9 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     private void calcQualityRatio(@NotNull Arc arc, int s, int d, Route route) {
         IntHashSet blacklist = route.getArcIdSet();
         blacklist.add(arc.edgeId);
-        IlsPathCh sp1 = shortestPath(s, arc.baseNode, blacklist);
+        Path4CH sp1 = shortestPath(s, arc.baseNode, blacklist);
         blacklist.addAll(sp1.getEdges());
-        IlsPathCh sp2 = shortestPath(arc.adjNode, d, blacklist);
+        Path4CH sp2 = shortestPath(arc.adjNode, d, blacklist);
 
         double value = 0;
 
@@ -383,9 +385,9 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     public double getPathCost(int s, int d, @NotNull Arc arc, Route route) {
         IntHashSet blacklist = route.getArcIdSet();
         blacklist.add(arc.edgeId);
-        IlsPathCh path1 = shortestPath(s, arc.baseNode, blacklist);
+        Path4CH path1 = shortestPath(s, arc.baseNode, blacklist);
         blacklist.addAll(path1.getEdges());
-        IlsPathCh path2 = shortestPath(arc.adjNode, d, blacklist);
+        Path4CH path2 = shortestPath(arc.adjNode, d, blacklist);
 
         if(path1.isFound() && path2.isFound()) {
             return path1.getDistance() + arc.cost + path2.getDistance();
@@ -395,18 +397,18 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     }
 
     @Override
-    public IlsPathCh shortestPath(int s, int d, @Nullable IntHashSet blacklist) {
+    public Path4CH shortestPath(int s, int d, @Nullable IntHashSet blacklist) {
         EdgeFilter edgeFilter = levelEdgeFilter;
         if(blacklist != null) {
             edgeFilter = new BlacklistEdgeFilter(CHGraph, levelEdgeFilter, blacklist);
         }
 
         RoutingAlgorithm search =
-                new IlsDijkstraSearch(CHGraph,
+                new DijkstraBidirectionCH(CHGraph,
                         weighting, TraversalMode.NODE_BASED)
                         .setEdgeFilter(edgeFilter);
 
-        return (IlsPathCh) search.calcPath(s, d);
+        return (Path4CH) search.calcPath(s, d);
     }
 
     // Unused

@@ -1,14 +1,14 @@
 /*
  *  Licensed to GraphHopper GmbH under one or more contributor
- *  license agreements. See the NOTICE file distributed with this work for 
+ *  license agreements. See the NOTICE file distributed with this work for
  *  additional information regarding copyright ownership.
- * 
- *  GraphHopper GmbH licenses this file to you under the Apache License, 
- *  Version 2.0 (the "License"); you may not use this file except in 
+ *
+ *  GraphHopper GmbH licenses this file to you under the Apache License,
+ *  Version 2.0 (the "License"); you may not use this file except in
  *  compliance with the License. You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,7 @@
  */
 package com.graphhopper.routing.ch;
 
+import com.carrotsearch.hppc.IntHashSet;
 import com.graphhopper.routing.PathBidirRef;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
@@ -32,10 +33,12 @@ import com.graphhopper.util.EdgeIterator;
  */
 public class Path4CH extends PathBidirRef {
     private final Graph routingGraph;
+    private IntHashSet edges;
 
     public Path4CH(Graph routingGraph, Graph baseGraph, Weighting weighting) {
         super(baseGraph, weighting);
         this.routingGraph = routingGraph;
+        this.edges = new IntHashSet();
     }
 
     @Override
@@ -46,7 +49,8 @@ public class Path4CH extends PathBidirRef {
     }
 
     private void expandEdge(CHEdgeIteratorState mainEdgeState, boolean reverse) {
-        if (!mainEdgeState.isShortcut()) {
+        edges.add(mainEdgeState.getEdge());
+        if(!mainEdgeState.isShortcut()) {
             distance += mainEdgeState.getDistance();
             time += weighting.calcMillis(mainEdgeState, reverse, EdgeIterator.NO_EDGE);
             addEdge(mainEdgeState.getEdge());
@@ -55,25 +59,26 @@ public class Path4CH extends PathBidirRef {
 
         int skippedEdge1 = mainEdgeState.getSkippedEdge1();
         int skippedEdge2 = mainEdgeState.getSkippedEdge2();
+        edges.addAll(skippedEdge1, skippedEdge2);
         int from = mainEdgeState.getBaseNode(), to = mainEdgeState.getAdjNode();
 
         // get properties like speed of the edge in the correct direction
-        if (reverse) {
+        if(reverse) {
             int tmp = from;
             from = to;
             to = tmp;
         }
 
         // getEdgeProps could possibly return an empty edge if the shortcut is available for both directions
-        if (reverseOrder) {
+        if(reverseOrder) {
             CHEdgeIteratorState edgeState = (CHEdgeIteratorState) routingGraph.getEdgeIteratorState(skippedEdge1, to);
             boolean empty = edgeState == null;
-            if (empty)
+            if(empty)
                 edgeState = (CHEdgeIteratorState) routingGraph.getEdgeIteratorState(skippedEdge2, to);
 
             expandEdge(edgeState, false);
 
-            if (empty)
+            if(empty)
                 edgeState = (CHEdgeIteratorState) routingGraph.getEdgeIteratorState(skippedEdge1, from);
             else
                 edgeState = (CHEdgeIteratorState) routingGraph.getEdgeIteratorState(skippedEdge2, from);
@@ -82,17 +87,21 @@ public class Path4CH extends PathBidirRef {
         } else {
             CHEdgeIteratorState iter = (CHEdgeIteratorState) routingGraph.getEdgeIteratorState(skippedEdge1, from);
             boolean empty = iter == null;
-            if (empty)
+            if(empty)
                 iter = (CHEdgeIteratorState) routingGraph.getEdgeIteratorState(skippedEdge2, from);
 
             expandEdge(iter, true);
 
-            if (empty)
+            if(empty)
                 iter = (CHEdgeIteratorState) routingGraph.getEdgeIteratorState(skippedEdge1, to);
             else
                 iter = (CHEdgeIteratorState) routingGraph.getEdgeIteratorState(skippedEdge2, to);
 
             expandEdge(iter, false);
         }
+    }
+
+    public IntHashSet getEdges() {
+        return edges;
     }
 }

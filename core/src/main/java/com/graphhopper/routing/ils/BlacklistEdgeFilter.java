@@ -17,8 +17,8 @@ public class BlacklistEdgeFilter implements EdgeFilter {
     private EdgeFilter edgeFilter;
     private IntHashSet blacklist;
 
-    BlacklistEdgeFilter(Graph routingGraph, @NotNull EdgeFilter edgeFilter, @NotNull IntHashSet blacklist) {
-        this.routingGraph = routingGraph;
+    BlacklistEdgeFilter(Graph graph, @NotNull EdgeFilter edgeFilter, @NotNull IntHashSet blacklist) {
+        routingGraph = graph;
         this.edgeFilter = edgeFilter;
         this.blacklist = blacklist;
     }
@@ -40,13 +40,18 @@ public class BlacklistEdgeFilter implements EdgeFilter {
                 int edge1 = chEdge.getSkippedEdge1();
                 int edge2 = chEdge.getSkippedEdge2();
                 int to = chEdge.getAdjNode();
+                int from = chEdge.getBaseNode();
 
                 return blacklist.contains(chEdge.getEdge()) ||
                         isBlacklisted(routingGraph.getEdgeIteratorState(edge1, to)) ||
-                        isBlacklisted(routingGraph.getEdgeIteratorState(edge2, to));
+                        isBlacklisted(routingGraph.getEdgeIteratorState(edge2, to)) ||
+                        isBlacklisted(routingGraph.getEdgeIteratorState(edge1, from)) ||
+                        isBlacklisted(routingGraph.getEdgeIteratorState(edge2, from));
             }
         }
 
         return blacklist.contains(edgeIteratorState.getEdge());
     }
+
+
 }

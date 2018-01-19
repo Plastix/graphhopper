@@ -2,6 +2,7 @@ package com.graphhopper.routing.ils;
 
 import com.carrotsearch.hppc.IntHashSet;
 import com.graphhopper.routing.Path;
+import com.graphhopper.routing.ch.Path4CH;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.util.EdgeIteratorState;
@@ -29,7 +30,7 @@ final class Route implements Iterable<Arc> {
     private final double MAX_COST;
 
     private List<Arc> arcs; // List of "attractive arcs" in the Route
-    private List<IlsPathCh> blankSegments; // List of shortest paths connecting non-contiguous attractive arcs.
+    private List<Path4CH> blankSegments; // List of shortest paths connecting non-contiguous attractive arcs.
     private double cost, score; // Current
 
     private Route(ShortestPathCalculator shortestPathCalculator, Graph graph, Weighting timeWeighting,
@@ -99,8 +100,8 @@ final class Route implements Iterable<Arc> {
         }
 
         // Remove two path segments surrounding Arc
-        IlsPathCh segment1 = blankSegments.remove(index);
-        IlsPathCh segment2 = blankSegments.remove(index);
+        Path4CH segment1 = blankSegments.remove(index);
+        Path4CH segment2 = blankSegments.remove(index);
         cost -= segment1.getDistance();
         cost -= segment2.getDistance();
 
@@ -123,7 +124,7 @@ final class Route implements Iterable<Arc> {
 
             // Calculate and add new path segment
             IntHashSet blacklist = getArcIdSet();
-            IlsPathCh segment = sp.shortestPath(start, end, blacklist);
+            Path4CH segment = sp.shortestPath(start, end, blacklist);
             blankSegments.add(index, segment);
             cost += segment.getDistance();
         }
@@ -152,8 +153,8 @@ final class Route implements Iterable<Arc> {
         if(!route.isEmpty()) {
             // We need to remove the inserted routes starting and ending path segments
             // We recalculate the new path segments below
-            IlsPathCh head = route.blankSegments.remove(0);
-            IlsPathCh tail = route.blankSegments.remove(route.blankSegments.size() - 1);
+            Path4CH head = route.blankSegments.remove(0);
+            Path4CH tail = route.blankSegments.remove(route.blankSegments.size() - 1);
             route.cost -= head.getDistance();
             route.cost -= tail.getDistance();
 
@@ -193,18 +194,18 @@ final class Route implements Iterable<Arc> {
 
         // If non-empty, remove the previous blank path segment before inserting the two new ones
         if(length > 0) {
-            IlsPathCh removed = blankSegments.remove(index);
+            Path4CH removed = blankSegments.remove(index);
             cost -= removed.getDistance();
         }
 
         IntHashSet blacklist = getArcIdSet();
         blacklist.addAll(list);
         blacklist.addAll(left.edgeId, right.edgeId);
-        IlsPathCh segment1 = sp.shortestPath(start, left.baseNode, blacklist);
+        Path4CH segment1 = sp.shortestPath(start, left.baseNode, blacklist);
         cost += segment1.getDistance();
 
         blacklist.addAll(segment1.getEdges());
-        IlsPathCh segment2 = sp.shortestPath(right.adjNode, end, blacklist);
+        Path4CH segment2 = sp.shortestPath(right.adjNode, end, blacklist);
         cost += segment2.getDistance();
 
         blankSegments.add(index, segment2);
@@ -435,7 +436,8 @@ final class Route implements Iterable<Arc> {
         builder.append(s);
         builder.append("] -> ");
 
-        for(int i = 0; i < blankSegments.size(); i++) {
+        int length = blankSegments.size();
+        for(int i = 0; i < length; i++) {
 
             for(EdgeIteratorState edgeIteratorState : blankSegments.get(i).calcEdges()) {
                 builder.append(edgeIteratorState.getEdge());
@@ -448,7 +450,9 @@ final class Route implements Iterable<Arc> {
                 builder.append(")");
             }
 
-            builder.append(" -> ");
+            if(i < length - 1) {
+                builder.append(" -> ");
+            }
         }
 
         builder.append(" [");

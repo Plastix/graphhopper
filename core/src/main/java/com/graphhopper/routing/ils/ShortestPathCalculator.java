@@ -1,6 +1,7 @@
 package com.graphhopper.routing.ils;
 
 import com.carrotsearch.hppc.IntHashSet;
+import com.graphhopper.routing.ch.Path4CH;
 import com.sun.istack.internal.NotNull;
 
 public interface ShortestPathCalculator {
@@ -8,7 +9,7 @@ public interface ShortestPathCalculator {
     /**
      * Returns the shortest distance in meters between two nodes of the graph.
      */
-    IlsPathCh shortestPath(int s, int d, IntHashSet blacklist);
+    Path4CH shortestPath(int s, int d, IntHashSet blacklist);
 
     /**
      * Returns the total distance in meters of the path s --> arc --> d where "-->" is shortest path.
