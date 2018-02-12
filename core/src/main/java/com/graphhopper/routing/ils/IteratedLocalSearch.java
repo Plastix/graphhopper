@@ -44,6 +44,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     private Weighting scoreWeighting; // Used for scoring arcs
     private int s, d; // Start and End Node IDs
     private Random random;
+    private double[] scores; // Keep track of score at each iteration
 
     private boolean isFinished = false;
 
@@ -70,6 +71,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         SEED = params.getLong(Parameters.Routing.SEED, System.currentTimeMillis());
 
         random = new Random(SEED);
+        scores = new double[MAX_ITERATIONS];
     }
 
     /**
@@ -99,6 +101,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
             logger.info("Seed: " + SEED);
             for(int i = 0; i < MAX_ITERATIONS; i++) {
+                scores[i] = solution.getPath().getScore();
                 logger.debug("Iteration " + i);
                 List<Arc> arcRemovalPool = solution.getCandidateArcsByIP();
                 logger.debug("Possible arcs to remove from solution: " + arcRemovalPool.size());
@@ -405,5 +408,10 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     @Override
     protected Path extractPath() {
         return null;
+    }
+
+    // Used for tracking progress of iterations
+    public double[] getScores() {
+        return scores;
     }
 }

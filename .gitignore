@@ -44,3 +44,6 @@ local.properties
 !malta-latest.osm.pbf
 /reader-json/nbproject/
 /graph-cache
+
+# Hide data files
+*.csv

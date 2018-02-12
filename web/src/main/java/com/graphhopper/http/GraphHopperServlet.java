@@ -43,6 +43,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.*;
 
+import static com.graphhopper.util.Parameters.Algorithms.BIKE_LOOP;
 import static com.graphhopper.util.Parameters.DETAILS.PATH_DETAILS;
 import static com.graphhopper.util.Parameters.Routing.*;
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
@@ -90,6 +91,13 @@ public class GraphHopperServlet extends GHBaseServlet {
         int minRoadLength = getIntParam(httpReq, MIN_ROAD_LENGTH, DEFAULT_MIN_ROAD_LENGTH);
         int iterations = getIntParam(httpReq, MAX_ITERATIONS, DEFAULT_MAX_ITERATIONS);
         long randomSeed = getLongParam(httpReq, SEED, System.currentTimeMillis());
+        int mode = getIntParam(httpReq, MODE, DEFAULT_MODE);
+        int runs = getIntParam(httpReq, NUM_RUNS, DEFAULT_NUM_RUNS);
+        String outputFile = getParam(httpReq, OUTPUT_FILE, DEFAULT_OUTPUT_FILE);
+
+        if(algoStr.equalsIgnoreCase(BIKE_LOOP)) {
+            enableInstructions = false;
+        }
 
         StopWatch sw = new StopWatch().start();
 
@@ -153,7 +161,11 @@ public class GraphHopperServlet extends GHBaseServlet {
                         put(MIN_ROAD_SCORE, minRoadScore).
                         put(MIN_ROAD_LENGTH, minRoadLength).
                         put(MAX_ITERATIONS, iterations).
-                        put(SEED, randomSeed);
+                        put(SEED, randomSeed).
+                        put(MODE, mode).
+                        put(NUM_RUNS, runs).
+                        put(OUTPUT_FILE, outputFile)
+                ;
 
                 ghRsp = graphHopper.route(request);
             } catch (IllegalArgumentException ex) {

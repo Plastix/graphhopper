@@ -1,14 +1,14 @@
 /*
  *  Licensed to GraphHopper GmbH under one or more contributor
- *  license agreements. See the NOTICE file distributed with this work for 
+ *  license agreements. See the NOTICE file distributed with this work for
  *  additional information regarding copyright ownership.
- * 
- *  GraphHopper GmbH licenses this file to you under the Apache License, 
- *  Version 2.0 (the "License"); you may not use this file except in 
+ *
+ *  GraphHopper GmbH licenses this file to you under the Apache License,
+ *  Version 2.0 (the "License"); you may not use this file except in
  *  compliance with the License. You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,6 +23,7 @@ import com.graphhopper.reader.dem.*;
 import com.graphhopper.routing.*;
 import com.graphhopper.routing.ch.CHAlgoFactoryDecorator;
 import com.graphhopper.routing.ch.PrepareContractionHierarchies;
+import com.graphhopper.routing.ils.IlsRoutingTemplate;
 import com.graphhopper.routing.lm.LMAlgoFactoryDecorator;
 import com.graphhopper.routing.subnetwork.PrepareRoutingSubnetworks;
 import com.graphhopper.routing.template.AlternativeRoutingTemplate;
@@ -1010,6 +1011,8 @@ public class GraphHopper implements GraphHopperAPI {
                 routingTemplate = new RoundTripRoutingTemplate(request, ghRsp, locationIndex, maxRoundTripRetries);
             else if (ALT_ROUTE.equalsIgnoreCase(algoStr))
                 routingTemplate = new AlternativeRoutingTemplate(request, ghRsp, locationIndex);
+            else if(BIKE_LOOP.equalsIgnoreCase(algoStr))
+                routingTemplate = new IlsRoutingTemplate(request, ghRsp, locationIndex);
             else
                 routingTemplate = new ViaRoutingTemplate(request, ghRsp, locationIndex);
 
