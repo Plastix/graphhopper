@@ -125,7 +125,7 @@ public class IlsRoutingTemplate extends AbstractRoutingTemplate implements Routi
 
                 double[] scores = ils.getScores();
                 for(int j = 0; j < scores.length; j++) {
-                    builder.append(String.format("%d,%f\n", j, scores[j]));
+                    builder.append(String.format("%d,%f\n", j + 1, scores[j]));
                 }
 
                 if(i % 10 == 0) {
