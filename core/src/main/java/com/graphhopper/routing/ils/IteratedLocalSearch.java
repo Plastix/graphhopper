@@ -5,7 +5,6 @@ import com.graphhopper.routing.AbstractRoutingAlgorithm;
 import com.graphhopper.routing.DijkstraBidirectionCH;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.RoutingAlgorithm;
-import com.graphhopper.routing.ch.PrepareContractionHierarchies;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.weighting.Weighting;
@@ -186,21 +185,19 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
         for(Arc e : cas) {
 
             // Basic restrictions on attractive arcs
-            if(e.score < MIN_ROAD_SCORE || e.cost < MIN_ROAD_LENGTH) {
-                continue;
-            }
-
-            // Spatial-based feasibility checking
-            for(GHPoint3D ghPoint3D : e.points) {
-                if(!ellipse.contains(ghPoint3D.lat, ghPoint3D.lon)) {
-                    continue outer;
+            if(e.score > MIN_ROAD_SCORE && e.cost > MIN_ROAD_LENGTH) {
+                // Spatial-based feasibility checking
+                for(GHPoint3D ghPoint3D : e.points) {
+                    if(!ellipse.contains(ghPoint3D.lat, ghPoint3D.lon)) {
+                        continue outer;
+                    }
                 }
-            }
 
-            // Check arc feasibility
-            if(getPathCost(s, d, e) <= cost) {
-                calcQualityRatio(e, s, d);
-                result.add(e);
+                // Check arc feasibility
+                if(getPathCost(s, d, e) <= cost) {
+                    calcQualityRatio(e, s, d);
+                    result.add(e);
+                }
             }
         }
 
