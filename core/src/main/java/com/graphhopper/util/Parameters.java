@@ -139,12 +139,17 @@ public class Parameters {
         public static final int DEFAULT_MIN_ROAD_LENGTH = 1000; // in meters
         public static final String SEED = "seed";
 
+        // ILS Test/Improvement params
         public static final String NUM_RUNS = "num_runs";
         public static final int DEFAULT_NUM_RUNS = 30;
         public static final String MODE = "mode";
         public static final int DEFAULT_MODE = 0;
         public static final String OUTPUT_FILE = "output_file";
         public static final String DEFAULT_OUTPUT_FILE = "data.csv";
+        public static final String SCORE_CUTOFF = "score_cutoff";
+        public static final double DEFAULT_SCORE_CUTOFF = 0.5;
+        public static final String BUDGET_PERCENTAGE = "budget_percentage";
+        public static final double DEFAULT_BUDGET_PERCENTAGE = 0.5;
 
     }
 

@@ -48,6 +48,26 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
     private boolean isFinished = false;
 
+    ////////////////////////////////////////////
+    // TEST CODE
+    ////////////////////////////////////////////
+    private final Mode MODE;
+    private final double BUDGET_PERCENTAGE;
+
+    private enum Mode {
+        NORMAL,
+        FIXED_PERCENTAGE_BUDGET,
+        INCREMENTAL_BUDGET,
+        NORMALIZED_SCORES;
+
+        static Mode getMode(int value) {
+            if(value >= 0 && value < values().length) {
+                return values()[value];
+            }
+            throw new RuntimeException("Invalid mode specified!");
+        }
+    }
+
     /**
      * Creates a new ILS algorithm instance.
      *
@@ -72,6 +92,17 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
         random = new Random(SEED);
         scores = new double[MAX_ITERATIONS];
+
+        ////////////////////////////////////////////
+        // TEST CODE
+        ////////////////////////////////////////////
+        MODE = Mode.getMode(params.getInt(Parameters.Routing.MODE, DEFAULT_MODE));
+        BUDGET_PERCENTAGE = params.getDouble(Parameters.Routing.BUDGET_PERCENTAGE,
+                Parameters.Routing.DEFAULT_BUDGET_PERCENTAGE);
+        if(MODE.equals(Mode.NORMALIZED_SCORES)) {
+            double SCORE_CUTOFF = params.getDouble(Parameters.Routing.SCORE_CUTOFF, DEFAULT_SCORE_CUTOFF);
+            scoreWeighting = new NormalizedBikePriorityWeighting(flagEncoder, SCORE_CUTOFF);
+        }
     }
 
     /**
@@ -100,8 +131,8 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
             solution = initializeSolution();
 
             logger.info("Seed: " + SEED);
-            for(int i = 0; i < MAX_ITERATIONS; i++) {
-                scores[i] = solution.getPath().getScore();
+            for(int i = 1; i <= MAX_ITERATIONS; i++) {
+                scores[i - 1] = solution.getPath().getScore();
                 logger.debug("Iteration " + i);
                 List<Arc> arcRemovalPool = solution.getCandidateArcsByIP();
                 logger.debug("Possible arcs to remove from solution: " + arcRemovalPool.size());
@@ -112,6 +143,17 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
 
                 // Remaining budget after removing "arcToRemove" from solution
                 double pathBudget = solution.getRemainingCost() + arcToRemove.cost;
+
+                ////////////////////////////////////////////
+                // TEST CODE
+                ////////////////////////////////////////////
+                if(MODE.equals(Mode.FIXED_PERCENTAGE_BUDGET)) {
+                    pathBudget = pathBudget * BUDGET_PERCENTAGE;
+                } else if(MODE.equals(Mode.INCREMENTAL_BUDGET)) {
+                    double percent = ((double) i / MAX_ITERATIONS) * (1 - BUDGET_PERCENTAGE);
+                    pathBudget = (pathBudget * percent) + BUDGET_PERCENTAGE;
+                }
+
                 Route path = generatePath(solution.getPrev(arcToRemove), solution.getNext(arcToRemove),
                         pathBudget, arcToRemove.score, inheritedCas);
 
