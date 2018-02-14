@@ -43,7 +43,6 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.*;
 
-import static com.graphhopper.util.Parameters.Algorithms.BIKE_LOOP;
 import static com.graphhopper.util.Parameters.DETAILS.PATH_DETAILS;
 import static com.graphhopper.util.Parameters.Routing.*;
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
@@ -84,21 +83,6 @@ public class GraphHopperServlet extends GHBaseServlet {
         String weighting = getParam(httpReq, "weighting", "fastest");
         String algoStr = getParam(httpReq, "algorithm", "");
         String localeStr = getParam(httpReq, "locale", "en");
-
-        // TODO (Aidan) Only used for bike route ILS algorithm
-        double maxDist = getDoubleParam(httpReq, MAX_DIST, DEFAULT_MAX_DIST);
-        double minRoadScore = getDoubleParam(httpReq, MIN_ROAD_SCORE, DEFAULT_MIN_ROAD_SCORE);
-        int minRoadLength = getIntParam(httpReq, MIN_ROAD_LENGTH, DEFAULT_MIN_ROAD_LENGTH);
-        int iterations = getIntParam(httpReq, MAX_ITERATIONS, DEFAULT_MAX_ITERATIONS);
-        long randomSeed = getLongParam(httpReq, SEED, System.currentTimeMillis());
-        int mode = getIntParam(httpReq, MODE, DEFAULT_MODE);
-        int runs = getIntParam(httpReq, NUM_RUNS, DEFAULT_NUM_RUNS);
-        String outputFile = getParam(httpReq, OUTPUT_FILE, DEFAULT_OUTPUT_FILE);
-        boolean run_tests = getBooleanParam(httpReq, BIKE_LOOP_TESTS, false);
-
-        if(run_tests) {
-            enableInstructions = false;
-        }
 
         StopWatch sw = new StopWatch().start();
 
@@ -157,17 +141,12 @@ public class GraphHopperServlet extends GHBaseServlet {
                         getHints().
                         put(CALC_POINTS, calcPoints).
                         put(INSTRUCTIONS, enableInstructions).
-                        put(WAY_POINT_MAX_DISTANCE, minPathPrecision).
-                        put(MAX_DIST, maxDist).
-                        put(MIN_ROAD_SCORE, minRoadScore).
-                        put(MIN_ROAD_LENGTH, minRoadLength).
-                        put(MAX_ITERATIONS, iterations).
-                        put(SEED, randomSeed).
-                        put(MODE, mode).
-                        put(NUM_RUNS, runs).
-                        put(OUTPUT_FILE, outputFile).
-                        put(BIKE_LOOP_TESTS, run_tests)
-                ;
+                        put(WAY_POINT_MAX_DISTANCE, minPathPrecision);
+
+                addIlsParams(httpReq, request);
+                if(getBooleanParam(httpReq, BIKE_LOOP_TESTS, false)){
+                    enableInstructions = false;
+                }
 
                 ghRsp = graphHopper.route(request);
             } catch (IllegalArgumentException ex) {
@@ -219,6 +198,24 @@ public class GraphHopperServlet extends GHBaseServlet {
                 writeJson(httpReq, httpRes, objectMapper.getNodeFactory().pojoNode(map));
             }
         }
+    }
+
+    /**
+     * Only used for ILS Bike route algorithms
+     */
+    private void addIlsParams(HttpServletRequest httpReq, GHRequest request) {
+        request.getHints().
+                put(MAX_DIST, getDoubleParam(httpReq, MAX_DIST, DEFAULT_MAX_DIST)).
+                put(MIN_ROAD_SCORE, getDoubleParam(httpReq, MIN_ROAD_SCORE, DEFAULT_MIN_ROAD_SCORE)).
+                put(MIN_ROAD_LENGTH, getIntParam(httpReq, MIN_ROAD_LENGTH, DEFAULT_MIN_ROAD_LENGTH)).
+                put(MAX_ITERATIONS, getIntParam(httpReq, MAX_ITERATIONS, DEFAULT_MAX_ITERATIONS)).
+                put(SEED, getLongParam(httpReq, SEED, System.currentTimeMillis())).
+                put(MODE, getIntParam(httpReq, MODE, DEFAULT_MODE)).
+                put(NUM_RUNS, getIntParam(httpReq, NUM_RUNS, DEFAULT_NUM_RUNS)).
+                put(OUTPUT_FILE, getParam(httpReq, OUTPUT_FILE, DEFAULT_OUTPUT_FILE)).
+                put(BIKE_LOOP_TESTS, getBooleanParam(httpReq, BIKE_LOOP_TESTS, false)).
+                put(MIN_DIST, getDoubleParam(httpReq, MIN_DIST, DEFAULT_MIN_DIST)).
+                put(SEARCH_DEPTH, getIntParam(httpReq, SEARCH_DEPTH, DEFAULT_SEARCH_DEPTH));
     }
 
     protected String createGPXString(HttpServletRequest req, HttpServletResponse res, PathWrapper rsp) {

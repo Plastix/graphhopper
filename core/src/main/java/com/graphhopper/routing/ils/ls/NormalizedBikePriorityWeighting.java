@@ -5,9 +5,9 @@ import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.util.EdgeIteratorState;
 
 /**
- * Weighting classed use to calculate scores of roads for the {@link IteratedLocalSearch} routing algorithm.
+ * Weighting classed use to calculate scores of roads for the {@link LSIteratedLocalSearch} routing algorithm.
  */
-public class NormalizedBikePriorityWeighting extends BikePriorityWeighting {
+class NormalizedBikePriorityWeighting extends BikePriorityWeighting {
 
     private double cutoff;
 

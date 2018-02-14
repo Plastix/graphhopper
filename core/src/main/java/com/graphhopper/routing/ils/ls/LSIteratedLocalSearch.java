@@ -6,6 +6,7 @@ import com.graphhopper.routing.DijkstraBidirectionCH;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.RoutingAlgorithm;
 import com.graphhopper.routing.ils.BikePriorityWeighting;
+import com.graphhopper.routing.ils.IlsAlgorithm;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.weighting.Weighting;
@@ -29,7 +30,7 @@ import static com.graphhopper.util.Parameters.Routing.*;
  * Routing Algorithm which implements the bike route Iterated Local Search algorithm from the following paper:
  * https://dl.acm.org/citation.cfm?id=2820835
  */
-public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements ShortestPathCalculator {
+public class LSIteratedLocalSearch extends AbstractRoutingAlgorithm implements ShortestPathCalculator, IlsAlgorithm {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -77,8 +78,8 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
      * @param levelEdgeFilter Edge filter for CH shortest path computation
      * @param params          Parameters map.
      */
-    public IteratedLocalSearch(Graph graph, Weighting weighting,
-                               EdgeFilter levelEdgeFilter, PMap params) {
+    public LSIteratedLocalSearch(Graph graph, Weighting weighting,
+                                 EdgeFilter levelEdgeFilter, PMap params) {
         super(graph.getBaseGraph(), weighting, TraversalMode.EDGE_BASED_1DIR);
 
         CHGraph = graph;
@@ -454,6 +455,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     }
 
     // Used for tracking progress of iterations
+    @Override
     public double[] getScores() {
         return scores;
     }

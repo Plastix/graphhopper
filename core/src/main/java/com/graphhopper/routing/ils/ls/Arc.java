@@ -7,11 +7,11 @@ import java.util.List;
 
 /**
  * Class which contains metadata about a particular edge in the graph. Used by
- * {@link Route} and {@link IteratedLocalSearch}
+ * {@link Route} and {@link LSIteratedLocalSearch}
  * <p>
  * In the ILS-CAS algorithm this represents an "attractive arc".
  */
-final class Arc {
+class Arc {
     static final int FAKE_ARC_ID = -1;
 
     final int edgeId, baseNode, adjNode;

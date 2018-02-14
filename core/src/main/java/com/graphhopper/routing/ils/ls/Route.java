@@ -14,10 +14,10 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Object which represents a path created by the {@link IteratedLocalSearch}
+ * Object which represents a path created by the {@link LSIteratedLocalSearch}
  * algorithm.
  */
-final class Route implements Iterable<Arc> {
+class Route implements Iterable<Arc> {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
 

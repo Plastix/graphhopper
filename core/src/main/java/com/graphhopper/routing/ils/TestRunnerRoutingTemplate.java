@@ -24,7 +24,7 @@ import com.graphhopper.routing.AlgorithmOptions;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.QueryGraph;
 import com.graphhopper.routing.RoutingAlgorithmFactory;
-import com.graphhopper.routing.ils.ls.IteratedLocalSearch;
+import com.graphhopper.routing.ils.ls.LSIteratedLocalSearch;
 import com.graphhopper.routing.template.AbstractRoutingTemplate;
 import com.graphhopper.routing.template.RoutingTemplate;
 import com.graphhopper.routing.util.DefaultEdgeFilter;
@@ -121,8 +121,7 @@ public class TestRunnerRoutingTemplate extends AbstractRoutingTemplate implement
             int runs = hints.getInt(NUM_RUNS, DEFAULT_NUM_RUNS);
             for(int i = 1; i <= runs; i++) {
                 hints.put(SEED, System.currentTimeMillis());
-                // TODO (Aidan) Replace this with an interface
-                IteratedLocalSearch ils = (IteratedLocalSearch) algoFactory.createAlgo(queryGraph, algoOpts);
+                IlsAlgorithm ils = (IlsAlgorithm) algoFactory.createAlgo(queryGraph, algoOpts);
                 ils.calcPath(start, end);
 
                 double[] scores = ils.getScores();

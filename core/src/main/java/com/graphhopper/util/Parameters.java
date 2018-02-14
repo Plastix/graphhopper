@@ -57,8 +57,16 @@ public class Parameters {
          */
         public static final String ROUND_TRIP = "round_trip";
 
-        // TODO (Aidan) Update these for ls/vva
-        public static final String BIKE_LOOP = "ils";
+        /**
+         * LS Iterated Local Search Algorithm for bike paths
+         * {@link com.graphhopper.routing.ils.ls.LSIteratedLocalSearch}
+         */
+        public static final String BIKE_LOOP_LS = "ils-ls";
+        /**
+         * VVA Iterated Local Search Algorithm for bike paths
+         * {@link com.graphhopper.routing.ils.vva.VVAIteratedLocalSearch}
+         */
+        public static final String BIKE_LOOP_VVA = "ils-vva";
 
         /**
          * All public properties for alternative routing.
@@ -128,31 +136,41 @@ public class Parameters {
          */
         public static final String BLOCK_AREA = "block_area";
 
+        /**
+         * Parameters for ILS algorithms.
+         */
         // TODO (Aidan) write documentation
+        // ILS test parameters
         public static final String BIKE_LOOP_TESTS = "run_tests";
+        public static final String NUM_RUNS = "num_runs";
+        public static final int DEFAULT_NUM_RUNS = 30;
+        public static final String OUTPUT_FILE = "output_file";
+        public static final String DEFAULT_OUTPUT_FILE = "data.csv";
 
+        // All ILS algorithms
         public static final String MAX_DIST = "max_dist";
         public static final double DEFAULT_MAX_DIST = 50_000; // in meters
         public static final String MAX_ITERATIONS = "max_iterations";
         public static final int DEFAULT_MAX_ITERATIONS = 20;
+
+        // LS-ILS parameters
         public static final String MIN_ROAD_SCORE = "min_road_score";
         public static final double DEFAULT_MIN_ROAD_SCORE = 0.5;
         public static final String MIN_ROAD_LENGTH = "min_road_length";
         public static final int DEFAULT_MIN_ROAD_LENGTH = 1000; // in meters
         public static final String SEED = "seed";
-
-        // ILS Test/Improvement params
-        public static final String NUM_RUNS = "num_runs";
-        public static final int DEFAULT_NUM_RUNS = 30;
         public static final String MODE = "mode";
         public static final int DEFAULT_MODE = 0;
-        public static final String OUTPUT_FILE = "output_file";
-        public static final String DEFAULT_OUTPUT_FILE = "data.csv";
         public static final String SCORE_CUTOFF = "score_cutoff";
         public static final double DEFAULT_SCORE_CUTOFF = 0.5;
         public static final String BUDGET_PERCENTAGE = "budget_percentage";
         public static final double DEFAULT_BUDGET_PERCENTAGE = 0.5;
 
+        // LS-VVA parameters
+        public static final String MIN_DIST = "min_dist";
+        public static final double DEFAULT_MIN_DIST = 1_000; // in meters
+        public static final String SEARCH_DEPTH = "depth";
+        public static final int DEFAULT_SEARCH_DEPTH = 4;
     }
 
     /**

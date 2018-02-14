@@ -1,6 +1,6 @@
 package com.graphhopper.routing.ils;
 
-import com.graphhopper.routing.ils.ls.IteratedLocalSearch;
+import com.graphhopper.routing.ils.ls.LSIteratedLocalSearch;
 import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.routing.util.PriorityCode;
 import com.graphhopper.routing.weighting.AbstractWeighting;
@@ -9,7 +9,7 @@ import com.graphhopper.util.EdgeIteratorState;
 import static com.graphhopper.routing.weighting.PriorityWeighting.KEY;
 
 /**
- * Weighting classed use to calculate scores of roads for the {@link IteratedLocalSearch} routing algorithm.
+ * Weighting classed use to calculate scores of roads for the {@link LSIteratedLocalSearch} routing algorithm.
  */
 public class BikePriorityWeighting extends AbstractWeighting {
 

@@ -8,7 +8,7 @@ import com.graphhopper.util.shapes.Shape;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 /**
- * Class which represents an Ellipse on the map. Used by the {@link IteratedLocalSearch} algorithm for restricting
+ * Class which represents an Ellipse on the map. Used by the {@link LSIteratedLocalSearch} algorithm for restricting
  * the search space.
  * <p>
  * Note: This does not fully implement the Shape interface!

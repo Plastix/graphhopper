@@ -6,8 +6,8 @@ import com.graphhopper.storage.Graph;
 import com.graphhopper.util.EdgeIteratorState;
 
 /**
- * Path object returned by ILS routing algorithm. This classes accepts a weighting for scoring edges of the graph and
- * adds to the total score of the path when {@link #processEdge(int, int, int)} is called.
+ * Path object returned by an ILS routing algorithm. This classes accepts a weighting for scoring edges of the graph
+ * and adds to the total score of the path when {@link #processEdge(int, int, int)} is called.
  */
 public class IlsPath extends Path {
 

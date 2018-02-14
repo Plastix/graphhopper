@@ -19,7 +19,8 @@ package com.graphhopper.routing.ch;
 
 import com.graphhopper.coll.GHTreeMapComposed;
 import com.graphhopper.routing.*;
-import com.graphhopper.routing.ils.ls.IteratedLocalSearch;
+import com.graphhopper.routing.ils.ls.LSIteratedLocalSearch;
+import com.graphhopper.routing.ils.vva.VVAIteratedLocalSearch;
 import com.graphhopper.routing.util.*;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.*;
@@ -29,9 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Random;
 
-import static com.graphhopper.util.Parameters.Algorithms.ASTAR_BI;
-import static com.graphhopper.util.Parameters.Algorithms.BIKE_LOOP;
-import static com.graphhopper.util.Parameters.Algorithms.DIJKSTRA_BI;
+import static com.graphhopper.util.Parameters.Algorithms.*;
 
 /**
  * This class prepares the graph for a bidirectional algorithm supporting contraction hierarchies
@@ -184,8 +183,10 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation imple
                 algo = new DijkstraBidirectionCHNoSOD(graph, prepareWeighting, traversalMode);
             }
             algo.setEdgeFilter(new LevelEdgeFilter(prepareGraph));
-        } else if(BIKE_LOOP.equals(opts.getAlgorithm())) {
-            return new IteratedLocalSearch(graph, prepareWeighting, new LevelEdgeFilter(prepareGraph), opts.getHints());
+        } else if(BIKE_LOOP_LS.equals(opts.getAlgorithm())) {
+            return new LSIteratedLocalSearch(graph, prepareWeighting, new LevelEdgeFilter(prepareGraph), opts.getHints());
+        } else if(BIKE_LOOP_VVA.equals(opts.getAlgorithm())) {
+            return new VVAIteratedLocalSearch(graph, prepareWeighting, new LevelEdgeFilter(prepareGraph), opts.getHints());
         } else {
             throw new IllegalArgumentException("Algorithm " + opts.getAlgorithm() + " not supported for Contraction Hierarchies. Try with ch.disable=true");
         }
