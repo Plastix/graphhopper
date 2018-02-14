@@ -57,7 +57,7 @@ public class Parameters {
          */
         public static final String ROUND_TRIP = "round_trip";
 
-        // TODO (Aidan)
+        // TODO (Aidan) Update these for ls/vva
         public static final String BIKE_LOOP = "ils";
 
         /**
@@ -129,6 +129,8 @@ public class Parameters {
         public static final String BLOCK_AREA = "block_area";
 
         // TODO (Aidan) write documentation
+        public static final String BIKE_LOOP_TESTS = "run_tests";
+
         public static final String MAX_DIST = "max_dist";
         public static final double DEFAULT_MAX_DIST = 50_000; // in meters
         public static final String MAX_ITERATIONS = "max_iterations";

@@ -19,7 +19,7 @@ package com.graphhopper.routing.ch;
 
 import com.graphhopper.coll.GHTreeMapComposed;
 import com.graphhopper.routing.*;
-import com.graphhopper.routing.ils.IteratedLocalSearch;
+import com.graphhopper.routing.ils.ls.IteratedLocalSearch;
 import com.graphhopper.routing.util.*;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.*;

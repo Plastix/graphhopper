@@ -1,4 +1,4 @@
-package com.graphhopper.routing.ils;
+package com.graphhopper.routing.ils.ls;
 
 import com.graphhopper.util.PointList;
 

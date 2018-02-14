@@ -1,5 +1,6 @@
 package com.graphhopper.routing.ils;
 
+import com.graphhopper.routing.ils.ls.IteratedLocalSearch;
 import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.routing.util.PriorityCode;
 import com.graphhopper.routing.weighting.AbstractWeighting;
@@ -12,7 +13,7 @@ import static com.graphhopper.routing.weighting.PriorityWeighting.KEY;
  */
 public class BikePriorityWeighting extends AbstractWeighting {
 
-    BikePriorityWeighting(FlagEncoder encoder) {
+    public BikePriorityWeighting(FlagEncoder encoder) {
         super(encoder);
     }
 

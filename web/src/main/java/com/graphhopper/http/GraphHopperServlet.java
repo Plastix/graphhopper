@@ -94,8 +94,9 @@ public class GraphHopperServlet extends GHBaseServlet {
         int mode = getIntParam(httpReq, MODE, DEFAULT_MODE);
         int runs = getIntParam(httpReq, NUM_RUNS, DEFAULT_NUM_RUNS);
         String outputFile = getParam(httpReq, OUTPUT_FILE, DEFAULT_OUTPUT_FILE);
+        boolean run_tests = getBooleanParam(httpReq, BIKE_LOOP_TESTS, false);
 
-        if(algoStr.equalsIgnoreCase(BIKE_LOOP)) {
+        if(run_tests) {
             enableInstructions = false;
         }
 
@@ -164,7 +165,8 @@ public class GraphHopperServlet extends GHBaseServlet {
                         put(SEED, randomSeed).
                         put(MODE, mode).
                         put(NUM_RUNS, runs).
-                        put(OUTPUT_FILE, outputFile)
+                        put(OUTPUT_FILE, outputFile).
+                        put(BIKE_LOOP_TESTS, run_tests)
                 ;
 
                 ghRsp = graphHopper.route(request);

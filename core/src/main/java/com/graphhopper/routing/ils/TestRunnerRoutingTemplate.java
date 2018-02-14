@@ -24,6 +24,7 @@ import com.graphhopper.routing.AlgorithmOptions;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.QueryGraph;
 import com.graphhopper.routing.RoutingAlgorithmFactory;
+import com.graphhopper.routing.ils.ls.IteratedLocalSearch;
 import com.graphhopper.routing.template.AbstractRoutingTemplate;
 import com.graphhopper.routing.template.RoutingTemplate;
 import com.graphhopper.routing.util.DefaultEdgeFilter;
@@ -50,7 +51,7 @@ import static com.graphhopper.util.Parameters.Routing.*;
 
 
 @SuppressWarnings("Duplicates")
-public class IlsRoutingTemplate extends AbstractRoutingTemplate implements RoutingTemplate {
+public class TestRunnerRoutingTemplate extends AbstractRoutingTemplate implements RoutingTemplate {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     protected final GHRequest ghRequest;
@@ -58,7 +59,7 @@ public class IlsRoutingTemplate extends AbstractRoutingTemplate implements Routi
     protected final PathWrapper altResponse = new PathWrapper();
     private final LocationIndex locationIndex;
 
-    public IlsRoutingTemplate(GHRequest ghRequest, GHResponse ghRsp, LocationIndex locationIndex) {
+    public TestRunnerRoutingTemplate(GHRequest ghRequest, GHResponse ghRsp, LocationIndex locationIndex) {
         this.locationIndex = locationIndex;
         this.ghRequest = ghRequest;
         this.ghResponse = ghRsp;
@@ -120,6 +121,7 @@ public class IlsRoutingTemplate extends AbstractRoutingTemplate implements Routi
             int runs = hints.getInt(NUM_RUNS, DEFAULT_NUM_RUNS);
             for(int i = 1; i <= runs; i++) {
                 hints.put(SEED, System.currentTimeMillis());
+                // TODO (Aidan) Replace this with an interface
                 IteratedLocalSearch ils = (IteratedLocalSearch) algoFactory.createAlgo(queryGraph, algoOpts);
                 ils.calcPath(start, end);
 

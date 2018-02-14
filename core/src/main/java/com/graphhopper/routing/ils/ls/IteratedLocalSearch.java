@@ -1,10 +1,11 @@
-package com.graphhopper.routing.ils;
+package com.graphhopper.routing.ils.ls;
 
 import com.carrotsearch.hppc.IntHashSet;
 import com.graphhopper.routing.AbstractRoutingAlgorithm;
 import com.graphhopper.routing.DijkstraBidirectionCH;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.RoutingAlgorithm;
+import com.graphhopper.routing.ils.BikePriorityWeighting;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.weighting.Weighting;

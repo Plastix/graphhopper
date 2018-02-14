@@ -23,7 +23,7 @@ import com.graphhopper.reader.dem.*;
 import com.graphhopper.routing.*;
 import com.graphhopper.routing.ch.CHAlgoFactoryDecorator;
 import com.graphhopper.routing.ch.PrepareContractionHierarchies;
-import com.graphhopper.routing.ils.IlsRoutingTemplate;
+import com.graphhopper.routing.ils.TestRunnerRoutingTemplate;
 import com.graphhopper.routing.lm.LMAlgoFactoryDecorator;
 import com.graphhopper.routing.subnetwork.PrepareRoutingSubnetworks;
 import com.graphhopper.routing.template.AlternativeRoutingTemplate;
@@ -60,6 +60,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static com.graphhopper.util.Helper.*;
 import static com.graphhopper.util.Parameters.Algorithms.*;
+import static com.graphhopper.util.Parameters.Routing.BIKE_LOOP_TESTS;
 
 /**
  * Easy to use access point to configure import and (offline) routing.
@@ -1011,8 +1012,8 @@ public class GraphHopper implements GraphHopperAPI {
                 routingTemplate = new RoundTripRoutingTemplate(request, ghRsp, locationIndex, maxRoundTripRetries);
             else if (ALT_ROUTE.equalsIgnoreCase(algoStr))
                 routingTemplate = new AlternativeRoutingTemplate(request, ghRsp, locationIndex);
-            else if(BIKE_LOOP.equalsIgnoreCase(algoStr))
-                routingTemplate = new IlsRoutingTemplate(request, ghRsp, locationIndex);
+            else if(request.getHints().getBool(BIKE_LOOP_TESTS, false))
+                routingTemplate = new TestRunnerRoutingTemplate(request, ghRsp, locationIndex);
             else
                 routingTemplate = new ViaRoutingTemplate(request, ghRsp, locationIndex);
 
