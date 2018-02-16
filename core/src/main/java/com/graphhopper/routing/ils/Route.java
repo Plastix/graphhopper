@@ -167,6 +167,12 @@ final class Route implements Iterable<Arc> {
 //
 //            updatePathSegments(index, first, last, route.getArcIdSet());
 
+            // If non-empty, remove the previous blank path segment before inserting the new route
+            if(length > 0) {
+                IlsPathCh removed = blankSegments.remove(index);
+                cost -= removed.getDistance();
+            }
+
             score += route.score;
             cost += route.cost;
             arcs.addAll(index, route.arcs);
