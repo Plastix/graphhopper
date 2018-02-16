@@ -1,14 +1,14 @@
 /*
  *  Licensed to GraphHopper GmbH under one or more contributor
- *  license agreements. See the NOTICE file distributed with this work for 
+ *  license agreements. See the NOTICE file distributed with this work for
  *  additional information regarding copyright ownership.
- * 
- *  GraphHopper GmbH licenses this file to you under the Apache License, 
- *  Version 2.0 (the "License"); you may not use this file except in 
+ *
+ *  GraphHopper GmbH licenses this file to you under the Apache License,
+ *  Version 2.0 (the "License"); you may not use this file except in
  *  compliance with the License. You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,7 @@
  */
 package com.graphhopper.storage;
 
+import com.carrotsearch.hppc.IntHashSet;
 import com.graphhopper.routing.ch.PrepareEncoder;
 import com.graphhopper.routing.util.AllCHEdgesIterator;
 import com.graphhopper.routing.util.EdgeFilter;
@@ -30,6 +31,9 @@ import com.graphhopper.util.*;
 import com.graphhopper.util.shapes.BBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static com.graphhopper.util.Helper.nf;
 
@@ -62,8 +66,10 @@ public class CHGraphImpl implements CHGraph, Storable<CHGraph> {
     private int S_SKIP_EDGE1, S_SKIP_EDGE2;
     private int shortcutCount = 0;
 
+    private Map<Integer, IntHashSet> globalSkippedEdges;
+
     CHGraphImpl(Weighting w, Directory dir, final BaseGraph baseGraph) {
-        if (w == null)
+        if(w == null)
             throw new IllegalStateException("Weighting for CHGraph cannot be null");
 
         this.weighting = w;
@@ -124,6 +130,8 @@ public class CHGraphImpl implements CHGraph, Storable<CHGraph> {
                 return "ch edge access " + name;
             }
         };
+
+        globalSkippedEdges = new HashMap<>();
     }
 
     public final Weighting getWeighting() {
@@ -412,6 +420,7 @@ public class CHGraphImpl implements CHGraph, Storable<CHGraph> {
     }
 
     public class CHEdgeIteratorImpl extends EdgeIterable implements CHEdgeExplorer, CHEdgeIterator {
+
         public CHEdgeIteratorImpl(BaseGraph baseGraph, EdgeAccess edgeAccess, EdgeFilter filter) {
             super(baseGraph, edgeAccess, filter);
         }
@@ -435,12 +444,34 @@ public class CHGraphImpl implements CHGraph, Storable<CHGraph> {
         @Override
         public final void setSkippedEdges(int edge1, int edge2) {
             checkShortcut(true, "setSkippedEdges");
-            if (EdgeIterator.Edge.isValid(edge1) != EdgeIterator.Edge.isValid(edge2)) {
+            if(EdgeIterator.Edge.isValid(edge1) != EdgeIterator.Edge.isValid(edge2)) {
                 throw new IllegalStateException("Skipped edges of a shortcut needs "
                         + "to be both valid or invalid but they were not " + edge1 + ", " + edge2);
             }
             shortcuts.setInt(edgePointer + S_SKIP_EDGE1, edge1);
             shortcuts.setInt(edgePointer + S_SKIP_EDGE2, edge2);
+
+            calcSkippedEdges(edge1, edge2);
+        }
+
+        private void calcSkippedEdges(int edge1, int edge2){
+            IntHashSet skippedEdges = new IntHashSet();
+            addSkippedEdges(edge1, skippedEdges);
+            addSkippedEdges(edge2, skippedEdges);
+            globalSkippedEdges.put(edgeId, skippedEdges);
+        }
+
+        private void addSkippedEdges(int edgeId, IntHashSet set) {
+            if(edgeId != NO_EDGE) {
+                set.add(edgeId);
+                EdgeIteratorState edge = getEdgeIteratorState(edgeId, adjNode);
+                if(edge != null && edge instanceof CHEdgeIteratorImpl) {
+                    CHEdgeIteratorImpl chEdge = ((CHEdgeIteratorImpl) edge);
+                    if(chEdge.isShortcut()) {
+                        set.addAll(chEdge.getSkippedEdges());
+                    }
+                }
+            }
         }
 
         @Override
@@ -484,6 +515,16 @@ public class CHGraphImpl implements CHGraph, Storable<CHGraph> {
             checkShortcut(true, "setWeight");
             CHGraphImpl.this.setWeight(this, weight);
             return this;
+        }
+
+        public IntHashSet getSkippedEdges() {
+            IntHashSet set = globalSkippedEdges.get(edgeId);
+
+            if(set == null){
+                set = new IntHashSet();
+            }
+
+            return set;
         }
 
         @Override

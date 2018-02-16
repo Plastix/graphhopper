@@ -2,17 +2,18 @@ package com.graphhopper.routing.ils;
 
 import com.carrotsearch.hppc.IntHashSet;
 import com.graphhopper.routing.PathBidirRef;
+import com.graphhopper.routing.ch.Path4CH;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
 
-public class IlsPathCh extends PathBidirRef {
+public class IlsPathCh extends Path4CH {
 
     private IntHashSet edges;
     private Graph routingGraph;
 
-    IlsPathCh(Graph g, Weighting weighting) {
-        super(g, weighting);
-        this.routingGraph = g;
+    IlsPathCh(Graph routingGraph, Graph baseGraph, Weighting weighting) {
+        super(routingGraph, baseGraph, weighting);
+        this.routingGraph = routingGraph;
         this.edges = new IntHashSet();
     }
 
