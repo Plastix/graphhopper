@@ -19,7 +19,8 @@ package com.graphhopper.routing.ch;
 
 import com.graphhopper.coll.GHTreeMapComposed;
 import com.graphhopper.routing.*;
-import com.graphhopper.routing.ils.ls.LSIteratedLocalSearch;
+import com.graphhopper.routing.ils.ls.backtrack.NOBIteratedLocalSearch;
+import com.graphhopper.routing.ils.ls.normal.LSIteratedLocalSearch;
 import com.graphhopper.routing.ils.vva.VVAIteratedLocalSearch;
 import com.graphhopper.routing.util.*;
 import com.graphhopper.routing.weighting.Weighting;
@@ -187,6 +188,8 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation imple
             return new LSIteratedLocalSearch(graph, prepareWeighting, new LevelEdgeFilter(prepareGraph), opts.getHints());
         } else if(BIKE_LOOP_VVA.equals(opts.getAlgorithm())) {
             return new VVAIteratedLocalSearch(graph, prepareWeighting, new LevelEdgeFilter(prepareGraph), opts.getHints());
+        }else if(BIKE_LOOP_LS_NOB.equals(opts.getAlgorithm())){
+            return new NOBIteratedLocalSearch(graph, weighting, opts.getHints());
         } else {
             throw new IllegalArgumentException("Algorithm " + opts.getAlgorithm() + " not supported for Contraction Hierarchies. Try with ch.disable=true");
         }

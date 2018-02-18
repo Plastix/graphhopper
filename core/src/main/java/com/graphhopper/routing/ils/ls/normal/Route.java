@@ -1,7 +1,8 @@
-package com.graphhopper.routing.ils.ls;
+package com.graphhopper.routing.ils.ls.normal;
 
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.ils.IlsPath;
+import com.graphhopper.routing.ils.ls.Arc;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.util.EdgeIteratorState;

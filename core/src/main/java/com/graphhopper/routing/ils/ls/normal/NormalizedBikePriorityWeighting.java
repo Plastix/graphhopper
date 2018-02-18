@@ -1,6 +1,7 @@
-package com.graphhopper.routing.ils.ls;
+package com.graphhopper.routing.ils.ls.normal;
 
 import com.graphhopper.routing.ils.BikePriorityWeighting;
+import com.graphhopper.routing.ils.ls.normal.LSIteratedLocalSearch;
 import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.util.EdgeIteratorState;
 

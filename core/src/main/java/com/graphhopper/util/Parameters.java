@@ -17,6 +17,8 @@
  */
 package com.graphhopper.util;
 
+import com.graphhopper.routing.ils.ls.normal.LSIteratedLocalSearch;
+
 /**
  * @author Peter Karich
  */
@@ -59,9 +61,15 @@ public class Parameters {
 
         /**
          * LS Iterated Local Search Algorithm for bike paths
-         * {@link com.graphhopper.routing.ils.ls.LSIteratedLocalSearch}
+         * {@link LSIteratedLocalSearch}
          */
         public static final String BIKE_LOOP_LS = "ils-ls";
+
+        /**
+         * LS Iterated Local Search Algorithm for bike paths
+         * {@link com.graphhopper.routing.ils.ls.backtrack.NOBIteratedLocalSearch}
+         */
+        public static final String BIKE_LOOP_LS_NOB = "ils-ls-nob";
         /**
          * VVA Iterated Local Search Algorithm for bike paths
          * {@link com.graphhopper.routing.ils.vva.VVAIteratedLocalSearch}

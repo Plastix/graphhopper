@@ -1,5 +1,6 @@
 package com.graphhopper.routing.ils.ls;
 
+import com.graphhopper.routing.ils.ls.normal.LSIteratedLocalSearch;
 import com.graphhopper.util.DistanceCalc;
 import com.graphhopper.util.Helper;
 import com.graphhopper.util.shapes.BBox;
@@ -13,7 +14,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
  * <p>
  * Note: This does not fully implement the Shape interface!
  */
-class Ellipse implements Shape {
+public class Ellipse implements Shape {
 
     private static DistanceCalc calc = Helper.DIST_EARTH;
 
@@ -21,7 +22,7 @@ class Ellipse implements Shape {
     private GHPoint focus2;
     private double radius;
 
-    Ellipse(GHPoint focus1, GHPoint focus2, double radius) {
+    public Ellipse(GHPoint focus1, GHPoint focus2, double radius) {
         this.focus1 = focus1;
         this.focus2 = focus2;
         this.radius = radius;

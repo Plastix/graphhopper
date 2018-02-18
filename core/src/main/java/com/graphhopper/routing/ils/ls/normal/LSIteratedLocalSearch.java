@@ -1,4 +1,4 @@
-package com.graphhopper.routing.ils.ls;
+package com.graphhopper.routing.ils.ls.normal;
 
 import com.carrotsearch.hppc.IntHashSet;
 import com.graphhopper.routing.AbstractRoutingAlgorithm;
@@ -7,6 +7,8 @@ import com.graphhopper.routing.Path;
 import com.graphhopper.routing.RoutingAlgorithm;
 import com.graphhopper.routing.ils.BikePriorityWeighting;
 import com.graphhopper.routing.ils.IlsAlgorithm;
+import com.graphhopper.routing.ils.ls.Arc;
+import com.graphhopper.routing.ils.ls.Ellipse;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.weighting.Weighting;

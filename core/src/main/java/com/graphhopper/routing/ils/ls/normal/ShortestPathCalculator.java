@@ -1,6 +1,7 @@
-package com.graphhopper.routing.ils.ls;
+package com.graphhopper.routing.ils.ls.normal;
 
 import com.graphhopper.routing.Path;
+import com.graphhopper.routing.ils.ls.Arc;
 import com.sun.istack.internal.NotNull;
 
 public interface ShortestPathCalculator {

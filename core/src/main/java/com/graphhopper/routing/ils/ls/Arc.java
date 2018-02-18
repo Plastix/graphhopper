@@ -7,18 +7,18 @@ import java.util.List;
 
 /**
  * Class which contains metadata about a particular edge in the graph. Used by
- * {@link Route} and {@link LSIteratedLocalSearch}
+ * the ILS algorithms.
  * <p>
  * In the ILS-CAS algorithm this represents an "attractive arc".
  */
-class Arc {
-    static final int FAKE_ARC_ID = -1;
+public class Arc {
+    public static final int FAKE_ARC_ID = -1;
 
-    final int edgeId, baseNode, adjNode;
-    final double cost, score;
-    final PointList points; // Points along the arc
+    public final int edgeId, baseNode, adjNode;
+    public final double cost, score;
+    public final PointList points; // Points along the arc
 
-    double improvePotential, qualityRatio; // Metrics used by ILS algorithm
+    public double improvePotential, qualityRatio; // Metrics used by ILS algorithm
     private List<Arc> cas; // Candidate Arc Set of this arc
 
     /**
@@ -31,7 +31,7 @@ class Arc {
      * @param score    The score of the arc.
      * @param points   Points on the map of the arc.
      */
-    Arc(int edgeId, int baseNode, int adjNode, double cost, double score, PointList points) {
+    public Arc(int edgeId, int baseNode, int adjNode, double cost, double score, PointList points) {
         this.edgeId = edgeId;
         this.baseNode = baseNode;
         this.adjNode = adjNode;
