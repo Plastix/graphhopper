@@ -120,20 +120,25 @@ public class TestRunnerRoutingTemplate extends AbstractRoutingTemplate implement
             int runs = hints.getInt(NUM_RUNS, DEFAULT_NUM_RUNS);
             long seed = hints.getLong(SEED, System.currentTimeMillis());
             for(int i = 1; i <= runs; i++) {
-                IlsAlgorithm ils = (IlsAlgorithm) algoFactory.createAlgo(queryGraph, algoOpts);
-                ils.calcPath(start, end);
+                try {
+                    IlsAlgorithm ils = (IlsAlgorithm) algoFactory.createAlgo(queryGraph, algoOpts);
+                    ils.calcPath(start, end);
 
-                double[] scores = ils.getScores();
-                for(int j = 0; j < scores.length; j++) {
-                    builder.append(String.format("%d,%f\n", j + 1, scores[j]));
+                    double[] scores = ils.getScores();
+                    for(int j = 0; j < scores.length; j++) {
+                        builder.append(String.format("%d,%f\n", j + 1, scores[j]));
+                    }
+
+                    if(i % 10 == 0) {
+                        logger.info("{} percent complete!", String.format("%.2f", ((double) i / runs) * 100.0));
+                    }
+
+                    seed++;
+                    hints.put(SEED, seed);
+                } catch(ClassCastException ex) {
+                    logger.error("You can only use this routing template with ILS algorithms!");
+                    break;
                 }
-
-                if(i % 10 == 0) {
-                    logger.info("{} percent complete!", String.format("%.2f", ((double) i / runs) * 100.0));
-                }
-
-                seed++;
-                hints.put(SEED, seed);
             }
 
             writer.append(builder);

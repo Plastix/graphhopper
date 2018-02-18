@@ -4,7 +4,8 @@ import com.carrotsearch.hppc.IntHashSet;
 import com.graphhopper.routing.AbstractRoutingAlgorithm;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.RoutingAlgorithm;
-import com.graphhopper.routing.ils.*;
+import com.graphhopper.routing.ils.BikePriorityWeighting;
+import com.graphhopper.routing.ils.IlsAlgorithm;
 import com.graphhopper.routing.ils.ls.Arc;
 import com.graphhopper.routing.ils.ls.Ellipse;
 import com.graphhopper.routing.util.DefaultEdgeFilter;
@@ -31,7 +32,7 @@ import static com.graphhopper.util.Parameters.Routing.*;
  * Routing Algorithm which implements the bike route Iterated Local Search algorithm from the following paper:
  * https://dl.acm.org/citation.cfm?id=2820835
  */
-public class NOBIteratedLocalSearch extends AbstractRoutingAlgorithm implements ShortestPathCalculator {
+public class NOBIteratedLocalSearch extends AbstractRoutingAlgorithm implements ShortestPathCalculator, IlsAlgorithm {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -46,14 +47,16 @@ public class NOBIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
     private Weighting scoreWeighting; // Used for scoring arcs
     private int s, d; // Start and End Node IDs
     private Random random;
+    private final double[] scores;
 
     private boolean isFinished = false;
 
     /**
      * Creates a new ILS algorithm instance.
-     *  @param graph           Graph to run algorithm on.
-     * @param weighting       Weighting to calculate costs.
-     * @param params          Parameters map.
+     *
+     * @param graph     Graph to run algorithm on.
+     * @param weighting Weighting to calculate costs.
+     * @param params    Parameters map.
      */
     public NOBIteratedLocalSearch(Graph graph, Weighting weighting,
                                   PMap params) {
@@ -69,6 +72,7 @@ public class NOBIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
         SEED = params.getLong(Parameters.Routing.SEED, System.currentTimeMillis());
 
         random = new Random(SEED);
+        scores = new double[MAX_ITERATIONS];
     }
 
     /**
@@ -97,7 +101,8 @@ public class NOBIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
             solution = initializeSolution();
 
             logger.info("Seed: " + SEED);
-            for(int i = 0; i < MAX_ITERATIONS; i++) {
+            for(int i = 1; i <= MAX_ITERATIONS; i++) {
+                scores[i - 1] = solution.getPath().getScore();
                 logger.debug("Iteration " + i);
                 List<Arc> arcRemovalPool = solution.getCandidateArcsByIP();
                 logger.debug("Possible arcs to remove from solution: " + arcRemovalPool.size());
@@ -424,5 +429,10 @@ public class NOBIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
     @Override
     protected Path extractPath() {
         return null;
+    }
+
+    @Override
+    public double[] getScores() {
+        return scores;
     }
 }

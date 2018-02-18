@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Base query setup
-runs=5
-iterations=20
+runs=500
+iterations=100
 query="http://localhost:8989/route?point=43.009327%2C-74.009166&point=43.009327%2C-74.009166\
 &vehicle=racingbike\
 &weighting=shortest\
@@ -75,6 +75,14 @@ curl -s -o /dev/null "$query\
 &min_road_length=0\
 &mode=3\
 &score_cutoff=0.5"
+
+echo "LS-Nob Algorithm (No Minimum Length)"
+curl -s -o /dev/null "$query\
+&output_file=ls_nob_no_min_length.csv\
+&algorithm=ils-ls-nob\
+&min_road_length=0\
+&min_road_length=0\
+&mode=0"	
 
 echo
 echo "Test queries complete!"
