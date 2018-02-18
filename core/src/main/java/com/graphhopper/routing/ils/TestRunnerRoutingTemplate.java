@@ -118,9 +118,9 @@ public class TestRunnerRoutingTemplate extends AbstractRoutingTemplate implement
             int end = toQResult.getClosestNode();
 
             int runs = hints.getInt(NUM_RUNS, DEFAULT_NUM_RUNS);
-            long seed = hints.getLong(SEED, System.currentTimeMillis());
             for(int i = 1; i <= runs; i++) {
                 try {
+                    hints.put(SEED, System.currentTimeMillis());
                     IlsAlgorithm ils = (IlsAlgorithm) algoFactory.createAlgo(queryGraph, algoOpts);
                     ils.calcPath(start, end);
 
@@ -133,8 +133,6 @@ public class TestRunnerRoutingTemplate extends AbstractRoutingTemplate implement
                         logger.info("{} percent complete!", String.format("%.2f", ((double) i / runs) * 100.0));
                     }
 
-                    seed++;
-                    hints.put(SEED, seed);
                 } catch(ClassCastException ex) {
                     logger.error("You can only use this routing template with ILS algorithms!");
                     break;
