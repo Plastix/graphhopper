@@ -395,7 +395,7 @@ public class IteratedLocalSearch extends AbstractRoutingAlgorithm implements Sho
     public IlsPathCh shortestPath(int s, int d, @Nullable IntHashSet blacklist) {
         EdgeFilter filter = edgeFilter;
         if(blacklist != null) {
-            filter = new BlacklistEdgeFilter(graph, edgeFilter, blacklist);
+            filter = new BlacklistEdgeFilter(edgeFilter, blacklist);
         }
 
         RoutingAlgorithm search =
