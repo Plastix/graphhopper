@@ -215,7 +215,8 @@ public class GraphHopperServlet extends GHBaseServlet {
                 put(OUTPUT_FILE, getParam(httpReq, OUTPUT_FILE, DEFAULT_OUTPUT_FILE)).
                 put(BIKE_LOOP_TESTS, getBooleanParam(httpReq, BIKE_LOOP_TESTS, false)).
                 put(MIN_DIST, getDoubleParam(httpReq, MIN_DIST, DEFAULT_MIN_DIST)).
-                put(SEARCH_DEPTH, getIntParam(httpReq, SEARCH_DEPTH, DEFAULT_SEARCH_DEPTH));
+                put(SEARCH_DEPTH, getIntParam(httpReq, SEARCH_DEPTH, DEFAULT_SEARCH_DEPTH)).
+                put(USE_SCALED_SCORES, getBooleanParam(httpReq, USE_SCALED_SCORES, false));
     }
 
     protected String createGPXString(HttpServletRequest req, HttpServletResponse res, PathWrapper rsp) {

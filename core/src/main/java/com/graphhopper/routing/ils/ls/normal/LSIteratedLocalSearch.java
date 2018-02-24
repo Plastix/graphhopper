@@ -108,6 +108,10 @@ public class LSIteratedLocalSearch extends AbstractRoutingAlgorithm implements S
             double SCORE_CUTOFF = params.getDouble(Parameters.Routing.SCORE_CUTOFF, DEFAULT_SCORE_CUTOFF);
             scoreWeighting = new NormalizedBikePriorityWeighting(flagEncoder, SCORE_CUTOFF);
         }
+
+        if(params.getBool(USE_SCALED_SCORES, false)) {
+            scoreWeighting = new ScaledBikePriorityWeighting(flagEncoder);
+        }
     }
 
     /**

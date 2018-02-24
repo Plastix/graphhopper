@@ -173,6 +173,7 @@ public class Parameters {
         public static final double DEFAULT_SCORE_CUTOFF = 0.5;
         public static final String BUDGET_PERCENTAGE = "budget_percentage";
         public static final double DEFAULT_BUDGET_PERCENTAGE = 0.5;
+        public static final String USE_SCALED_SCORES = "scaled_scores";
 
         // LS-VVA parameters
         public static final String MIN_DIST = "min_dist";
