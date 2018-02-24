@@ -6,6 +6,7 @@ import com.graphhopper.routing.Path;
 import com.graphhopper.routing.RoutingAlgorithm;
 import com.graphhopper.routing.ils.BikePriorityWeighting;
 import com.graphhopper.routing.ils.IlsAlgorithm;
+import com.graphhopper.routing.ils.Iteration;
 import com.graphhopper.routing.ils.ls.Arc;
 import com.graphhopper.routing.ils.ls.Ellipse;
 import com.graphhopper.routing.util.DefaultEdgeFilter;
@@ -47,7 +48,7 @@ public class NOBIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
     private Weighting scoreWeighting; // Used for scoring arcs
     private int s, d; // Start and End Node IDs
     private Random random;
-    private final double[] scores;
+    private final Iteration[] iterations;
 
     private boolean isFinished = false;
 
@@ -72,7 +73,7 @@ public class NOBIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
         SEED = params.getLong(Parameters.Routing.SEED, System.currentTimeMillis());
 
         random = new Random(SEED);
-        scores = new double[MAX_ITERATIONS];
+        iterations = new Iteration[MAX_ITERATIONS];
     }
 
     /**
@@ -94,6 +95,7 @@ public class NOBIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
      * Main algorithm loop
      */
     private Path runILS() {
+        long start = System.currentTimeMillis();
         Route solution;
         if(shortestPath(s, d, null).getDistance() > MAX_COST) {
             solution = Route.newRoute(this, graph, weighting, scoreWeighting, s, d, MAX_COST);
@@ -102,7 +104,7 @@ public class NOBIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
 
             logger.info("Seed: " + SEED);
             for(int i = 1; i <= MAX_ITERATIONS; i++) {
-                scores[i - 1] = solution.getPath().getScore();
+                double score = solution.getPath().getScore();
                 logger.debug("Iteration " + i);
                 List<Arc> arcRemovalPool = solution.getCandidateArcsByIP();
                 logger.debug("Possible arcs to remove from solution: " + arcRemovalPool.size());
@@ -136,6 +138,9 @@ public class NOBIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
                         }
                     }
                 }
+
+                long elapsed = System.currentTimeMillis() - start;
+                iterations[i - 1] = new Iteration(score, elapsed / 1000.0);
             }
         }
 
@@ -432,7 +437,7 @@ public class NOBIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
     }
 
     @Override
-    public double[] getScores() {
-        return scores;
+    public Iteration[] getIterationInfo() {
+        return iterations;
     }
 }

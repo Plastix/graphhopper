@@ -106,7 +106,7 @@ public class TestRunnerRoutingTemplate extends AbstractRoutingTemplate implement
 
             FileWriter writer = new FileWriter(file, true);
             StringBuilder builder = new StringBuilder();
-            builder.append("iteration,score\n");
+            builder.append("iteration,score,time\n");
 
             QueryResult fromQResult = queryResults.get(0);
             // enforce start direction
@@ -124,9 +124,10 @@ public class TestRunnerRoutingTemplate extends AbstractRoutingTemplate implement
                     IlsAlgorithm ils = (IlsAlgorithm) algoFactory.createAlgo(queryGraph, algoOpts);
                     ils.calcPath(start, end);
 
-                    double[] scores = ils.getScores();
-                    for(int j = 0; j < scores.length; j++) {
-                        builder.append(String.format("%d,%f\n", j + 1, scores[j]));
+                    Iteration[] iterationInfo = ils.getIterationInfo();
+                    for(int j = 0; j < iterationInfo.length; j++) {
+                        Iteration iteration = iterationInfo[j];
+                        builder.append(String.format("%d,%f,%f\n", j + 1, iteration.getScore(), iteration.getTime()));
                     }
 
                     if(i % 10 == 0) {

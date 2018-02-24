@@ -4,5 +4,5 @@ import com.graphhopper.routing.RoutingAlgorithm;
 
 public interface IlsAlgorithm extends RoutingAlgorithm {
 
-    double[] getScores();
+    Iteration[] getIterationInfo();
 }

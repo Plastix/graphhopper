@@ -7,6 +7,7 @@ import com.graphhopper.routing.RoutingAlgorithm;
 import com.graphhopper.routing.ils.BikePriorityWeighting;
 import com.graphhopper.routing.ils.IlsAlgorithm;
 import com.graphhopper.routing.ils.IlsPath;
+import com.graphhopper.routing.ils.Iteration;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.weighting.Weighting;
@@ -35,7 +36,7 @@ public class VVAIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
 
     private boolean isFinished = false;
     private int s, d;
-    private double[] scores;
+    private Iteration[] iterations;
 
     /**
      * @param graph specifies the graph where this algorithm will run on
@@ -53,7 +54,7 @@ public class VVAIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
         MAX_DEPTH = params.getInt(SEARCH_DEPTH, DEFAULT_SEARCH_DEPTH);
         MAX_ITERATIONS = params.getInt(Parameters.Routing.MAX_ITERATIONS, DEFAULT_MAX_ITERATIONS);
 
-        scores = new double[MAX_ITERATIONS];
+        iterations = new Iteration[MAX_ITERATIONS];
     }
 
     @Override
@@ -76,10 +77,11 @@ public class VVAIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
     }
 
     private Route improve(Route solution) {
+        long start = System.currentTimeMillis();
         Route newPath = new Route();
         int a = 1, r = 1, count = 0;
         while(count < MAX_ITERATIONS) {
-            scores[count] = getPath(solution).getScore();
+            double score = getPath(solution).getScore();
             Route temp = solution.copy();
             int size = temp.length();
 
@@ -119,6 +121,10 @@ public class VVAIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
                 a++;
                 r++;
             }
+
+            long elapsed = System.currentTimeMillis() - start;
+            iterations[count] = new Iteration(score, elapsed / 1000.0);
+
             // Clear temp path so we can use it again
             newPath.clear();
             count++;
@@ -215,7 +221,7 @@ public class VVAIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
     }
 
     @Override
-    public double[] getScores() {
-        return scores;
+    public Iteration[] getIterationInfo() {
+        return iterations;
     }
 }

@@ -7,6 +7,7 @@ import com.graphhopper.routing.Path;
 import com.graphhopper.routing.RoutingAlgorithm;
 import com.graphhopper.routing.ils.BikePriorityWeighting;
 import com.graphhopper.routing.ils.IlsAlgorithm;
+import com.graphhopper.routing.ils.Iteration;
 import com.graphhopper.routing.ils.ls.Arc;
 import com.graphhopper.routing.ils.ls.Ellipse;
 import com.graphhopper.routing.util.EdgeFilter;
@@ -48,7 +49,7 @@ public class LSIteratedLocalSearch extends AbstractRoutingAlgorithm implements S
     private Weighting scoreWeighting; // Used for scoring arcs
     private int s, d; // Start and End Node IDs
     private Random random;
-    private double[] scores; // Keep track of score at each iteration
+    private Iteration[] iterations; // Keep track of score at each iteration
 
     private boolean isFinished = false;
 
@@ -95,7 +96,7 @@ public class LSIteratedLocalSearch extends AbstractRoutingAlgorithm implements S
         SEED = params.getLong(Parameters.Routing.SEED, System.currentTimeMillis());
 
         random = new Random(SEED);
-        scores = new double[MAX_ITERATIONS];
+        iterations = new Iteration[MAX_ITERATIONS];
 
         ////////////////////////////////////////////
         // TEST CODE
@@ -128,15 +129,15 @@ public class LSIteratedLocalSearch extends AbstractRoutingAlgorithm implements S
      * Main algorithm loop
      */
     private Path runILS() {
+        long start = System.currentTimeMillis();
         Route solution;
         if(shortestPath(s, d).getDistance() > MAX_COST) {
             solution = Route.newRoute(this, graph, weighting, scoreWeighting, s, d, MAX_COST);
         } else {
             solution = initializeSolution();
-
             logger.info("Seed: " + SEED);
             for(int i = 1; i <= MAX_ITERATIONS; i++) {
-                scores[i - 1] = solution.getPath().getScore();
+                double score = solution.getPath().getScore();
                 logger.debug("Iteration " + i);
                 List<Arc> arcRemovalPool = solution.getCandidateArcsByIP();
                 logger.debug("Possible arcs to remove from solution: " + arcRemovalPool.size());
@@ -181,6 +182,9 @@ public class LSIteratedLocalSearch extends AbstractRoutingAlgorithm implements S
                         }
                     }
                 }
+
+                long elapsed = System.currentTimeMillis() - start;
+                iterations[i - 1] = new Iteration(score, elapsed / 1000.0);
             }
         }
 
@@ -458,7 +462,7 @@ public class LSIteratedLocalSearch extends AbstractRoutingAlgorithm implements S
 
     // Used for tracking progress of iterations
     @Override
-    public double[] getScores() {
-        return scores;
+    public Iteration[] getIterationInfo() {
+        return iterations;
     }
 }
