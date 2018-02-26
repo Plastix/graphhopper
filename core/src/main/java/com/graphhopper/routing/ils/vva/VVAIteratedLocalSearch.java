@@ -8,6 +8,7 @@ import com.graphhopper.routing.ils.BikePriorityWeighting;
 import com.graphhopper.routing.ils.IlsAlgorithm;
 import com.graphhopper.routing.ils.IlsPath;
 import com.graphhopper.routing.ils.Iteration;
+import com.graphhopper.routing.util.DefaultEdgeFilter;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.weighting.Weighting;
@@ -37,6 +38,7 @@ public class VVAIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
     private boolean isFinished = false;
     private int s, d;
     private Iteration[] iterations;
+    private EdgeFilter bikeEdgeFilter;
 
     /**
      * @param graph specifies the graph where this algorithm will run on
@@ -48,6 +50,7 @@ public class VVAIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
         CHGraph = graph;
         this.levelEdgeFilter = levelEdgeFilter;
         scoreWeighting = new BikePriorityWeighting(flagEncoder);
+        bikeEdgeFilter = new DefaultEdgeFilter(flagEncoder);
 
         MAX_COST = params.getDouble(MAX_DIST, DEFAULT_MAX_DIST);
         MIN_COST = params.getDouble(MIN_DIST, DEFAULT_MIN_DIST);
@@ -150,7 +153,7 @@ public class VVAIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
         }
 
         // Using edgeExplorer from baseGraph for traversal (non-CH version)
-        EdgeExplorer explorer = outEdgeExplorer;
+        EdgeExplorer explorer = graph.createEdgeExplorer(bikeEdgeFilter);
         EdgeIterator edgeIterator = explorer.setBaseNode(s);
 
         while(edgeIterator.next()) {
