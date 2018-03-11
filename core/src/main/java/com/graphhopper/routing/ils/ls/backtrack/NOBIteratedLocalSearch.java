@@ -9,6 +9,7 @@ import com.graphhopper.routing.ils.IlsAlgorithm;
 import com.graphhopper.routing.ils.Iteration;
 import com.graphhopper.routing.ils.ls.Arc;
 import com.graphhopper.routing.ils.ls.Ellipse;
+import com.graphhopper.routing.ils.ls.normal.ScaledBikePriorityWeighting;
 import com.graphhopper.routing.util.DefaultEdgeFilter;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.TraversalMode;
@@ -74,6 +75,10 @@ public class NOBIteratedLocalSearch extends AbstractRoutingAlgorithm implements 
 
         random = new Random(SEED);
         iterations = new Iteration[MAX_ITERATIONS];
+
+        if(params.getBool(USE_SCALED_SCORES, false)) {
+            scoreWeighting = new ScaledBikePriorityWeighting(flagEncoder);
+        }
     }
 
     /**

@@ -5,7 +5,7 @@ import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.util.EdgeIteratorState;
 
 public class ScaledBikePriorityWeighting extends BikePriorityWeighting {
-    ScaledBikePriorityWeighting(FlagEncoder encoder) {
+    public ScaledBikePriorityWeighting(FlagEncoder encoder) {
         super(encoder);
     }
 
